@@ -36,3 +36,6 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+
+# Text editor temp files
+.idea/
