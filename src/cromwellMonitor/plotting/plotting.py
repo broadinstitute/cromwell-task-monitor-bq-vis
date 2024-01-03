@@ -14,7 +14,7 @@ from bokeh.models import ColumnDataSource, Div
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.plotting import figure
 
-from .data_processing import get_outliers, mean_of_string, get_1st_disk_usage, create_outlier_table
+from .data_processing import mean_of_string, get_1st_disk_usage, create_outlier_table
 
 import logging
 
@@ -515,7 +515,7 @@ def plot_detailed_resource_usage(
 
 
 def plot_shards(
-        df_monitoring: pd.DataFrame, task_name: str, shards, pdf, create_runtime_dict):
+        df_monitoring: pd.DataFrame, task_name: str, shards, pdf):
     for shard in shards:
         df_monitoring_task_shard = df_monitoring.metrics_runtime.loc[
             (df_monitoring.metrics_runtime['runtime_task_call_name'] == task_name) &
@@ -525,7 +525,9 @@ def plot_shards(
             (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name) &
             (df_monitoring.metadata_runtime['runtime_shard'] == shard)
         ]
-        df_monitoring_task_shard = df_monitoring_task_shard.sort_values(by='metrics_timestamp')
+        df_monitoring_task_shard = df_monitoring_task_shard.sort_values(
+            by='metrics_timestamp'
+        )
 
         # Calculate the duration of the task shard
         max_datetime = max(df_monitoring_task_shard['metrics_timestamp'])
@@ -596,64 +598,8 @@ def plot_resource_usage(df_monitoring, parent_workflow_id, task_names):
                     df_monitoring=df_monitoring,
                     task_name=task_name,
                     shards=shards,
-                    pdf=pdf,
-                    create_runtime_dict=create_runtime_dict
+                    pdf=pdf
                 )
-                # for shard in shards:
-                #     df_monitoring_task_shard = df_monitoring.metrics_runtime.loc[
-                #         (
-                #                 df_monitoring.metrics_runtime[
-                #                     'runtime_task_call_name'] == task_name) & (
-                #                 df_monitoring.metrics_runtime['runtime_shard'] == shard
-                #         )
-                #         ]
-                #     df_monitoring_metadata_runtime_task_shard = \
-                #         df_monitoring.metadata_runtime.loc[
-                #             (df_monitoring.metadata_runtime[
-                #                  'runtime_task_call_name'] == task_name) & (
-                #                     df_monitoring.metadata_runtime[
-                #                         'runtime_shard'] == shard)]
-                #     df_monitoring_task_shard = df_monitoring_task_shard.sort_values(
-                #         by='metrics_timestamp')
-                #
-                #     # Calculate the duration of the task shard
-                #     max_datetime = max(df_monitoring_task_shard['metrics_timestamp'])
-                #     min_datetime = min(df_monitoring_task_shard['metrics_timestamp'])
-                #     task_shard_duration = round(
-                #         datetime.timedelta.total_seconds(max_datetime - min_datetime))
-                #
-                #     # create an array for to hold the y values from the list columns
-                #     cpu_used_percent_array = [np.asarray(x).mean() for x in
-                #                               df_monitoring_task_shard.metrics_cpu_used_percent]
-                #     disk_used_gb_array = [np.asarray(x).max() for x in
-                #                           df_monitoring_task_shard.metrics_disk_used_gb]
-                #     disk_read_iops_array = [np.asarray(x).max() for x in
-                #                             df_monitoring_task_shard.metrics_disk_read_iops]
-                #     disk_write_iops_array = [np.asarray(x).max() for x in
-                #                              df_monitoring_task_shard.metrics_disk_write_iops]
-                #
-                #     # Creates a dictionary of runtime attributes
-                #     runtime_dic = create_runtime_dict(
-                #         df_monitoring_metadata_runtime_task_shard)
-                #
-                #     # Plotting
-                #     # For size and style of plots
-                #     resource_plt = plot_detailed_resource_usage(
-                #         task_name=task_name,
-                #         shard_number=shard,
-                #         task_shard_duration=task_shard_duration,
-                #         df_monitoring_task_shard=df_monitoring_task_shard,
-                #         cpu_used_percent_array=cpu_used_percent_array,
-                #         runtime_dic=runtime_dic,
-                #         disk_used_gb_array=disk_used_gb_array,
-                #         disk_read_iops_array=disk_read_iops_array,
-                #         disk_write_iops_array=disk_write_iops_array
-                #     )
-                #
-                #     resource_plt.subplots_adjust(hspace=0.5)
-                #     pdf.savefig(bbox_inches='tight', pad_inches=0.5)
-                #     plt.show()
-                #     plt.close()
 
 
 def create_runtime_dict(
