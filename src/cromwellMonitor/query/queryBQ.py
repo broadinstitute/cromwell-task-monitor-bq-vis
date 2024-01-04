@@ -187,6 +187,12 @@ class QueryBQToMonitor:
         self.metrics = pd.concat(l)
 
         # QC
+        # Error if metrics is empty
+        if (self.metrics.empty):
+            self.logger.error("Metrics table is empty. Please verify workflow id or "
+                              "timeframe.")
+            return
+        # Warning if there are missing metrics
         retries = 0
         d = set(self.metadata_runtime.runtime_instance_id.unique()) - set(
             self.metrics.metrics_instance_id.unique())
