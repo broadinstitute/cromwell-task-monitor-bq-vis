@@ -85,20 +85,40 @@ def remove_nan(input_data: dict):
     return clean_dict
 
 
+def calculate_workflow_duration(df_monitoring) -> int:
+    """
+    Calculate the total duration of a workflow in seconds.
+
+    Parameters:
+    df_monitoring (DataFrame): The dataframe containing the monitoring metrics.
+
+    Returns:
+    int: The total duration of the workflow in seconds.
+    """
+    latest_end_datetime = max(df_monitoring.metrics['metrics_timestamp'])
+    earliest_start_datetime = min(df_monitoring.metrics['metrics_timestamp'])
+    workflow_duration: int = round(
+        datetime.timedelta.total_seconds(latest_end_datetime - earliest_start_datetime))
+
+    return workflow_duration
+
+
 def generate_workflow_summary(
         parent_workflow_id: str,
         df_task_summary_named: pd.DataFrame,
         task_summary_duration: dict,
-        workflow_duration: int,
+        df_monitoring: pd.DataFrame,
 ):
     """
     Generate a workflow summary html file using bokeh
     @param parent_workflow_id:
     @param df_task_summary_named:
     @param task_summary_duration:
-    @param workflow_duration:
+    @param df_monitoring:
     @return:
     """
+
+    workflow_duration = calculate_workflow_duration(df_monitoring=df_monitoring)
 
     # Place any outputs from bokeh into the following file
     output_file("{}_workflow_summary.html".format(parent_workflow_id))
