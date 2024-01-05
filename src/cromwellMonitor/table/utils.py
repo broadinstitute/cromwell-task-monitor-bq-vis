@@ -1,5 +1,25 @@
 import datetime
+from os import path
+
 import pandas as pd
+
+
+def load_dataframe(filename) -> pd.DataFrame or None:
+    """
+    Load a dataframe from a pickle file
+    :param filename:  the name of the pickle file
+    :return:
+    """
+    if path.exists(filename):
+        df = pd.read_pickle(filename)
+        print(f'Successfully loaded data from {filename}. '
+              f'The dataframe has {df.shape[0]} rows and {df.shape[1]} columns.')
+        return df
+    else:
+        print(f'No data found. The file {filename} '
+              f'does not exist in the current directory.')
+        return None
+
 
 def get_info_per_task(task_name, df):
     """
