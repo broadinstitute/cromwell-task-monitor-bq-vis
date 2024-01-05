@@ -390,7 +390,7 @@ def plot_shard_summary(
                     task_name_input), width=600, height=25)],
                 [p_dur[0], p_dur[2]],
                 [p_dur[1], p_dur[3]],
-                [p_dur[5]]
+                [p_dur[5], Div(text="", width=50, height=25)]
             ],
             sizing_mode='scale_width')
     )
@@ -641,7 +641,8 @@ def create_runtime_dict(
             'meta_cpu'],
         "requested_mem_gb": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
             'meta_mem_total_gb'],
+        # meta_disk_total_gb is a list of disk sizes even if there is only one disk
         "requested_disk_gb": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'meta_disk_total_gb']
+            'meta_disk_total_gb'][0].round(2)
     }
     return runtime_dic
