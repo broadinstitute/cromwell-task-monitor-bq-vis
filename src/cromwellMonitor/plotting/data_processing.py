@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from bokeh.models import ColumnDataSource, TableColumn, DataTable, Div
+import plotly.graph_objects as go
 
 
 def mean_of_string(x: list):
@@ -24,7 +24,7 @@ def get_1st_disk_usage(x):
 
 
 def get_outliers(
-        shards: np.ndarray, resource_value: list, resource_label: str
+        shards: list, resource_value: list, resource_label: str
 ) -> (pd.DataFrame, pd.DataFrame):
     """
     Get the upper and lower outliers for a given resource
@@ -35,7 +35,7 @@ def get_outliers(
     """
     df = pd.DataFrame(dict(Resource_Usage=resource_value, Shard_Index=shards))
 
-    # find the quartiles and IQR
+    # Find the quartiles and IQR
     q1 = df.Resource_Usage.quantile(q=0.25)
     q2 = df.Resource_Usage.quantile(q=0.5)
     q3 = df.Resource_Usage.quantile(q=0.75)
@@ -46,17 +46,15 @@ def get_outliers(
     upper_outliers = df[df.Resource_Usage > upper]
     lower_outliers = df[df.Resource_Usage < lower]
 
+    # Rename the columns
     upper_outliers = upper_outliers.rename(columns={"Resource_Usage": resource_label})
     lower_outliers = lower_outliers.rename(columns={"Resource_Usage": resource_label})
 
-    # print("Upper outliers: ")
-    # display(upper_outliers)
+    # Add a None row if there are no outliers
     if upper_outliers.empty:
         upper_outliers = pd.concat([upper_outliers, pd.DataFrame(
             [{resource_label: "None", "Shard_Index": "None"}])], ignore_index=True)
 
-    # print("Lower outliers: ")
-    # display(lower_outliers)
     if lower_outliers.empty:
         lower_outliers = pd.concat([lower_outliers, pd.DataFrame(
             [{resource_label: "None", "Shard_Index": "None"}])], ignore_index=True)
@@ -64,11 +62,9 @@ def get_outliers(
     return lower_outliers, upper_outliers
 
 
-def create_outlier_table(
-        shards: np.ndarray, resource_value: list, resource_label: str
-):
+def create_outlier_table_plotly(shards: list, resource_value: list, resource_label: str):
     """
-    Create bokeh tables for upper and lower outliers
+    Create plotly tables for upper and lower outliers
     @param shards:
     @param resource_value:
     @param resource_label:
@@ -78,19 +74,20 @@ def create_outlier_table(
         shards=shards, resource_value=resource_value, resource_label=resource_label
     )
 
-    # Get Column names from pandas dataframe
-    Columns = [TableColumn(field=Ci, title=Ci) for Ci in upper_outliers.columns]
+    upper_table = go.Table(
+        header=dict(values=list(upper_outliers.columns),
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[upper_outliers[col] for col in upper_outliers.columns],
+                   fill_color='lavender',
+                   align='left'))
 
-    # Create bokeh datatables using pandas dataframe and column names
-    upper_table = DataTable(
-        columns=Columns, source=ColumnDataSource(upper_outliers)
-    )  # bokeh table
-    lower_table = DataTable(
-        columns=Columns, source=ColumnDataSource(lower_outliers)
-    )  # bokeh table
+    lower_table = go.Table(
+        header=dict(values=list(lower_outliers.columns),
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[lower_outliers[col] for col in lower_outliers.columns],
+                   fill_color='lavender',
+                   align='left'))
 
-    # table title
-    upper_div = Div(text="<h3>Upper Outliers</h3>", width=200, height=20)
-    lower_div = Div(text="<h3>Lower Outliers</h3>", width=200, height=20)
-
-    return upper_div, upper_table, lower_div, lower_table
+    return upper_table, lower_table

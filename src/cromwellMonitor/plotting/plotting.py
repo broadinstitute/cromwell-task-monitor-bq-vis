@@ -1,5 +1,4 @@
 import datetime
-import statistics
 from math import isnan
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
@@ -10,11 +9,17 @@ import seaborn as sns
 from bokeh.io import curdoc
 from bokeh.io import output_notebook, output_file, show
 from bokeh.layouts import layout
-from bokeh.models import ColumnDataSource, Div
+from bokeh.models import ColumnDataSource, Div, Whisker
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.plotting import figure
+import plotly.io as pio
+from plotly.subplots import make_subplots
 
-from .data_processing import mean_of_string, get_1st_disk_usage, create_outlier_table
+import plotly.offline as pyo
+import plotly.graph_objects as go
+
+from .data_processing import mean_of_string, get_1st_disk_usage, \
+    create_outlier_table_plotly
 
 import logging
 
@@ -153,59 +158,11 @@ def generate_workflow_summary(
     ]))
 
 
-def plot_bar(
-        x_value: np.array, y_value: list, chart_title: str, y_label: str, x_label: str
+def plot_bar_plotly(
+        x_value: list, y_value: list, y_label: str, x_label: str
 ):
     """
-    Plot a bar plot
-    @param x_value:
-    @param y_value:
-    @param chart_title:
-    @param y_label:
-    @param x_label:
-    @return:
-    """
-    # Needed in every cell to show plots in notebook
-    output_notebook()
-
-    # what to display when hovering
-    TOOLTIPS = [(x_label, ' @x'), (y_label, ' @top')]
-
-    # plot attributes
-    p = figure(x_range=x_value,
-               height=350,
-               sizing_mode="scale_width",
-               title=chart_title,
-               toolbar_location="left",
-               tooltips=TOOLTIPS)
-
-    # plot
-    p.vbar(x=x_value, top=y_value, width=0.9)
-
-    p.xgrid.grid_line_color = None
-    p.y_range.start = 0
-
-    # orient x labels vertically
-    p.xaxis.major_label_orientation = "vertical"
-
-    # axis titles
-    p.xaxis.axis_label = x_label
-    p.yaxis.axis_label = y_label
-
-    # Add the Mean horizontal line
-    p.ray(x=[0], y=[round(statistics.mean(y_value), 1)], length=len(x_value),
-          color='red', angle=0,
-          name="Mean: " + str(round(statistics.mean(y_value), 1)))
-
-    # show(p)
-    return p
-
-
-def plot_sns_violin(
-        x_value: np.array, y_value: list, chart_title: str, y_label: str, x_label: str
-):
-    """
-    Plot a violin plot
+    Plot a bar plot using Plotly
     @param x_value:
     @param y_value:
     @param chart_title:
@@ -214,25 +171,37 @@ def plot_sns_violin(
     @return:
     """
 
-    output_notebook()
-    # set plot size
-    # plt.rcParams["figure.figsize"] = (7, 7)
-    # plt.figure(figsize=(7,7))
+    return go.Bar(x=x_value, y=y_value, x0=x_label, y0=y_label)
 
-    # create df using array of values
-    df = pd.DataFrame(dict(Resource_Usage=y_value, Shard_Index=x_value))
 
-    # plot styling
-    sns.set(style="whitegrid")
+def create_violin_plot_plotly(y_values: list, x_values: list , y_label: str, x_label: str):
+    """
+    Create a violin plot with outliers marked using Plotly
+    @param title:
+    @param data:
+    @param y_label:
+    @param x_label:
+    @return:
+    """
+    # Create a DataFrame from the data
+    df = pd.DataFrame({"y_value": y_values, "x_value": x_values})
 
-    # plot values
-    ax = sns.violinplot(y=df["Resource_Usage"]) #,figsize=(7, 7)
+    return go.Violin(
+        y=df['y_value'],
+        box_visible=True,
+        line_color='black',
+        meanline_visible=True,
+        fillcolor='blue',
+        opacity=0.6,
+        points='outliers',
+        hoverinfo='y',
+        hovertemplate=
+        f'<i>{x_label}</i>: %{{text}}<br>' +
+        f'<i>{y_label}</i>: %{{y}}',
+        text=df['x_value'].values,
 
-    # set plot lables
-    ax.set(xlabel=x_label, ylabel=y_label, title=chart_title)
+    )
 
-    # return(plt.show())
-    return ax
 
 
 def plot_1_metric(input_dataset: dict, title: str, y_label: str, x_label: str):
@@ -244,18 +213,23 @@ def plot_1_metric(input_dataset: dict, title: str, y_label: str, x_label: str):
     @param x_label:
     @return:
     """
-    x = np.array((list(input_dataset.keys())))
-    y = list(input_dataset.values())
-    # o = get_outliers(shards=x, resource_value=y, resource_label=y_label)
-    (upper_div, upper_table, lower_div, lower_table) = create_outlier_table(shards=x, resource_value=y, resource_label=y_label)
-    violin_plot = plot_sns_violin(x, y, title, y_label, x_label)
-    bar_plot = plot_bar(x, y, title, y_label, x_label)
 
-    return upper_div, upper_table, lower_div, lower_table, violin_plot, bar_plot
+    x = list(input_dataset.keys())
+    y = [round(value) for value in input_dataset.values()]
+    (upper_outlier_table, lower_outlier_table) = create_outlier_table_plotly(
+        shards=x, resource_value=y, resource_label=y_label
+    )
+    violin_plot = create_violin_plot_plotly(
+        x_values=x, y_values=y, y_label=y_label, x_label=x_label
+    )
+    bar_plot = plot_bar_plotly(x_value=x, y_value=y, y_label=y_label, x_label=x_label)
+
+    return bar_plot, violin_plot, lower_outlier_table, upper_outlier_table
 
 
 def plot_shard_summary(
-        parent_workflow_id: str, df_input: pd.DataFrame, task_name_input: str, pdf
+        parent_workflow_id: str, df_input: pd.DataFrame, task_name_input: str,
+        plt_height: int = None, plt_width: int = None
 ):
     # Removes shards with null in columns being measured.
     df_droped_na = df_input.metrics_runtime.dropna(
@@ -352,57 +326,121 @@ def plot_shard_summary(
         x_label="Shards"
     )
 
-    Title_div = Div(
-        text="<h1>{} {} Task Shard Summary</h2>".format(parent_workflow_id,
-                                                        task_name_input),
-        width=1200, height=25)
-
     # Writes to html file all the generated plots and tables for summary shard
-    show(
-        layout(
-            [
-                [Title_div],
-                [Div(text="<h2>{} Average CPU Usage Per Shard</h2>".format(
-                    task_name_input), width=600, height=25)],
-                [p_cpu_a[0], p_cpu_a[2]],
-                [p_cpu_a[1], p_cpu_a[3]],
-                [p_cpu_a[5], Div(text="", width=50, height=25)],
+    fig = make_subplots(
+        rows=10,
+        cols=2,
+        vertical_spacing=0.03,
+        specs=[
 
-                [Div(text="<h2>{} Max CPU Usage Per Shard</h2>".format(task_name_input),
-                     width=600, height=25)],
-                [p_cpu_m[0], p_cpu_m[2]],
-                [p_cpu_m[1], p_cpu_m[3]],
-                [p_cpu_m[5], Div(text="", width=50, height=25)],
+            [{"type": "bar"}, {"type": "scatter"}],
+            [{"type": "table"}, {"type": "table"}],
+            [{"type": "bar"}, {"type": "scatter"}],
+            [{"type": "table"}, {"type": "table"}],
+            [{"type": "bar"}, {"type": "scatter"}],
+            [{"type": "table"}, {"type": "table"}],
+            [{"type": "bar"}, {"type": "scatter"}],
+            [{"type": "table"}, {"type": "table"}],
+            [{"type": "bar"}, {"type": "scatter"}],
+            [{"type": "table"}, {"type": "table"}],
+        ],
+        subplot_titles=[
 
-                [Div(text="<h2>{} Max Memory Usage Per Shard</h2>".format(
-                    task_name_input), width=600, height=25)],
-                [p_mem_m[0], p_mem_m[2]],
-                [p_mem_m[1], p_mem_m[3]],
-                [p_mem_m[5], Div(text="", width=50, height=25)],
+            "Average CPU Usage Per Shard",
+            "Average CPU Usage Percentage",
+            "Average CPU Usage Lower Outliers",
+            "Average CPU Usage Upper Outliers",
 
-                [Div(text="<h2>{} Max Disk Usage Per Shard</h2>".format(
-                    task_name_input), width=600, height=25)],
-                [p_dis_m[0], p_dis_m[2]],
-                [p_dis_m[1], p_dis_m[3]],
-                [p_dis_m[5], Div(text="", width=50, height=25)],
+            "Max CPU Usage Per Shard",
+            "Max CPU Usage Percentage",
+            "Max CPU Usage Lower Outliers",
+            "Max CPU Usage Upper Outliers",
 
-                [Div(text="<h2>{} Time Duration Usage Per Shard</h2>".format(
-                    task_name_input), width=600, height=25)],
-                [p_dur[0], p_dur[2]],
-                [p_dur[1], p_dur[3]],
-                [p_dur[5], Div(text="", width=50, height=25)]
-            ],
-            sizing_mode='scale_width')
+            "Max Memory Usage Per Shard",
+            "Max Memory Usage",
+            "Max Memory Usage Lower Outliers",
+            "Max Memory Usage Upper Outliers",
+
+            "Max Disk Usage Per Shard",
+            "Max Disk Usage",
+            "Max Disk Usage Lower Outliers",
+            "Max Disk Usage Upper Outliers",
+
+            "Time Duration Usage Per Shard",
+            "Time Duration"
+            "Time Duration Lower Outliers",
+            "Time Duration Upper Outliers",
+        ]
+
     )
 
-    return plt
+    # Add plots to the subplots
+    fig.add_trace(p_cpu_a[0], row=1, col=1)  # Table
+    fig.add_trace(p_cpu_a[1], row=1, col=2)  # Table
+    fig.add_trace(p_cpu_a[2], row=2, col=1)  # Plot
+    fig.add_trace(p_cpu_a[3], row=2, col=2)  # Plot
+    fig.add_trace(p_cpu_m[0], row=3, col=1)  # Table
+    fig.add_trace(p_cpu_m[1], row=3, col=2)  # Table
+    fig.add_trace(p_cpu_m[2], row=4, col=1)  # Plot
+    fig.add_trace(p_cpu_m[3], row=4, col=2)  # Plot
+    fig.add_trace(p_mem_m[0], row=5, col=1)  # Table
+    fig.add_trace(p_mem_m[1], row=5, col=2)  # Table
+    fig.add_trace(p_mem_m[2], row=6, col=1)  # Plot
+    fig.add_trace(p_mem_m[3], row=6, col=2)  # Plot
+    fig.add_trace(p_dis_m[0], row=7, col=1)  # Table
+    fig.add_trace(p_dis_m[1], row=7, col=2)  # Table
+    fig.add_trace(p_dis_m[2], row=8, col=1)  # Plot
+    fig.add_trace(p_dis_m[3], row=8, col=2)  # Plot
+    fig.add_trace(p_dur[0], row=9, col=1)  # Table
+    fig.add_trace(p_dur[1], row=9, col=2)  # Table
+    fig.add_trace(p_dur[2], row=10, col=1)  # Plot
+    fig.add_trace(p_dur[3], row=10, col=2)  # Plot
+
+    # Update X Axis Title
+    fig.update_xaxes(title_text="Shards", row=1, col=1)
+    fig.update_xaxes(title_text="Shards", row=1, col=2)
+    fig.update_xaxes(title_text="Shards", row=3, col=1)
+    fig.update_xaxes(title_text="Shards", row=3, col=2)
+    fig.update_xaxes(title_text="Shards", row=5, col=1)
+    fig.update_xaxes(title_text="Shards", row=5, col=2)
+    fig.update_xaxes(title_text="Shards", row=7, col=1)
+    fig.update_xaxes(title_text="Shards", row=7, col=2)
+    fig.update_xaxes(title_text="Shards", row=9, col=1)
+    fig.update_xaxes(title_text="Shards", row=9, col=2)
+
+    # Update Y Axis Title
+    fig.update_yaxes(title_text="CPU Usage", row=1, col=1)
+    fig.update_yaxes(title_text="CPU Usage", row=1, col=2)
+    fig.update_yaxes(title_text="CPU Usage", row=3, col=1)
+    fig.update_yaxes(title_text="CPU Usage", row=3, col=2)
+    fig.update_yaxes(title_text="Memory Usage", row=5, col=1)
+    fig.update_yaxes(title_text="Memory Usage", row=5, col=2)
+    fig.update_yaxes(title_text="Disk Usage", row=7, col=1)
+    fig.update_yaxes(title_text="Disk Usage", row=7, col=2)
+    fig.update_yaxes(title_text="Seconds", row=9, col=1)
+    fig.update_yaxes(title_text="Seconds", row=9, col=2)
+
+    # Add title to the whole figure
+    fig.update_layout(
+        height=plt_height,
+        width=plt_width,
+        title_text="{} {} Task Shard Summary".format(
+            parent_workflow_id,
+            task_name_input
+        ),
+        showlegend=False,
+    )
+
+    return fig
+
 
 def get_shard_summary(
         df_monitoring: pd.DataFrame,
         task_name: str,
         parent_workflow_id: str,
         max_shards: int,
-        pdf
+        plt_height: int = 5000,
+        plt_width: int = 1200,
 ):
     """
     Creates a pdf file with resource usage plots for each task name
@@ -410,6 +448,8 @@ def get_shard_summary(
     @param task_name:
     @param parent_workflow_id:
     @param max_shards:
+    @param plt_width:
+    @param plt_height:
     @return:
     """
     # create and sort meta table by duration
@@ -432,13 +472,11 @@ def get_shard_summary(
         df_input=df_monitoring,
         task_name_input=task_name,
         parent_workflow_id=parent_workflow_id,
-        pdf=pdf
+        plt_height=plt_height,
+        plt_width=plt_width
     )
 
-    resource_plt.subplots_adjust(hspace=0.5)
-    pdf.savefig(bbox_inches='tight', pad_inches=0.5)
-    plt.show()
-    plt.close()
+    return resource_plt
 
 
 def plot_detailed_resource_usage(
@@ -470,62 +508,81 @@ def plot_detailed_resource_usage(
     sns.set(style="whitegrid")
 
     cpu_plt = plt.subplot(5, 1, 1)
-    cpu_plt.set_title("Task Name: " + task_name + " Shard: " + str(shard_number) + " Duration: " + str(task_shard_duration), fontsize=20)
-    cpu_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'), cpu_used_percent_array, label='CPU Used')
-    cpu_plt.plot([], [], ' ', label='Obtained CPU Cores: {}'.format(runtime_dic["available_cpu_cores"]))
-    cpu_plt.plot([], [], ' ', label='Requested CPU Cores: {}'.format(runtime_dic["requested_cpu_cores"]))
+    cpu_plt.set_title("Task Name: " + task_name + " Shard: " + str(
+        shard_number) + " Duration: " + str(task_shard_duration), fontsize=20)
+    cpu_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'),
+                 cpu_used_percent_array, label='CPU Used')
+    cpu_plt.plot([], [], ' ', label='Obtained CPU Cores: {}'.format(
+        runtime_dic["available_cpu_cores"]))
+    cpu_plt.plot([], [], ' ', label='Requested CPU Cores: {}'.format(
+        runtime_dic["requested_cpu_cores"]))
     cpu_plt.legend(loc='upper center', bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
     cpu_plt.set_ylabel('CPU Percentage Used')
     cpu_plt.set_xlabel("Date Time")
-    cpu_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(), df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
+    cpu_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(),
+                     df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
     cpu_plt2 = cpu_plt.twiny()
     cpu_plt2.set_xlim(0, task_shard_duration)
     cpu_plt2.set_xlabel("Duration Time")
     cpu_plt.grid(True)
 
     mem_plt = plt.subplot(5, 1, 2)
-    mem_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'), df_monitoring_task_shard.metrics_mem_used_gb, label='Memory Used')
-    mem_plt.axhline(y=runtime_dic["available_mem_gb"], color='r', label='Max Memory GB: %.2f' % (runtime_dic["available_mem_gb"]))
-    mem_plt.plot([], [], ' ', label='Obtained Memory GB: {}'.format(runtime_dic["available_mem_gb"]))
-    mem_plt.plot([], [], ' ', label='Requested Memory GB: {}'.format(runtime_dic["requested_mem_gb"]))
+    mem_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'),
+                 df_monitoring_task_shard.metrics_mem_used_gb, label='Memory Used')
+    mem_plt.axhline(y=runtime_dic["available_mem_gb"], color='r',
+                    label='Max Memory GB: %.2f' % (runtime_dic["available_mem_gb"]))
+    mem_plt.plot([], [], ' ',
+                 label='Obtained Memory GB: {}'.format(runtime_dic["available_mem_gb"]))
+    mem_plt.plot([], [], ' ', label='Requested Memory GB: {}'.format(
+        runtime_dic["requested_mem_gb"]))
     mem_plt.legend(loc='upper center', bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
     mem_plt.set_ylabel('Memory Used in GB')
     mem_plt.set_xlabel("Date Time")
-    mem_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(), df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
+    mem_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(),
+                     df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
     mem_plt2 = mem_plt.twiny()
     mem_plt2.set_xlim(0, task_shard_duration)
     mem_plt2.set_xlabel("Duration Time")
     mem_plt.grid(True)
 
     disk_plt = plt.subplot(5, 1, 3)
-    disk_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'), disk_used_gb_array, label='Disk Used')
-    disk_plt.axhline(y=runtime_dic["available_disk_gb"], color='r', label='Max Disksize GB: %.2f' % (runtime_dic["available_disk_gb"]))
-    disk_plt.plot([], [], ' ', label='Obtained Disksize GB: {}'.format(runtime_dic["available_disk_gb"]))
-    disk_plt.plot([], [], ' ', label='Requested Disksize GB: {}'.format(runtime_dic["requested_disk_gb"]))
+    disk_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'),
+                  disk_used_gb_array, label='Disk Used')
+    disk_plt.axhline(y=runtime_dic["available_disk_gb"], color='r',
+                     label='Max Disksize GB: %.2f' % (runtime_dic["available_disk_gb"]))
+    disk_plt.plot([], [], ' ', label='Obtained Disksize GB: {}'.format(
+        runtime_dic["available_disk_gb"]))
+    disk_plt.plot([], [], ' ', label='Requested Disksize GB: {}'.format(
+        runtime_dic["requested_disk_gb"]))
     disk_plt.legend(loc='upper center', bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
     disk_plt.set_ylabel('Diskspace Used in GB')
     disk_plt.set_xlabel("Date Time")
-    disk_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(), df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
+    disk_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(),
+                      df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
     disk_plt2 = disk_plt.twiny()
     disk_plt2.set_xlim(0, task_shard_duration)
     disk_plt2.set_xlabel("Duration Time")
     disk_plt.grid(True)
 
     disk_read_plt = plt.subplot(5, 1, 4)
-    disk_read_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'), disk_read_iops_array, label='Disk Read IOps')
+    disk_read_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'),
+                       disk_read_iops_array, label='Disk Read IOps')
     disk_read_plt.set_ylabel('Disk Read IOps')
     disk_read_plt.set_xlabel("Date Time")
-    disk_read_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(), df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
+    disk_read_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(),
+                           df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
     disk_read_plt2 = disk_read_plt.twiny()
     disk_read_plt2.set_xlim(0, task_shard_duration)
     disk_read_plt2.set_xlabel("Duration Time")
     disk_read_plt.grid(True)
 
     disk_write_plt = plt.subplot(5, 1, 5)
-    disk_write_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'), disk_write_iops_array, label='Disk Write_IOps')
+    disk_write_plt.plot(df_monitoring_task_shard.metrics_timestamp.astype('O'),
+                        disk_write_iops_array, label='Disk Write_IOps')
     disk_write_plt.set_ylabel('Disk Write_IOps')
     disk_write_plt.set_xlabel("Date Time")
-    disk_write_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(), df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
+    disk_write_plt.set_xlim(df_monitoring_task_shard.metrics_timestamp.min(),
+                            df_monitoring_task_shard.metrics_timestamp.max())  # Set x-axis limits
     disk_write_plt2 = disk_write_plt.twiny()
     disk_write_plt2.set_xlim(0, task_shard_duration)
     disk_write_plt2.set_xlabel("Duration Time")
@@ -540,11 +597,11 @@ def plot_shards(
         df_monitoring_task_shard = df_monitoring.metrics_runtime.loc[
             (df_monitoring.metrics_runtime['runtime_task_call_name'] == task_name) &
             (df_monitoring.metrics_runtime['runtime_shard'] == shard)
-        ]
+            ]
         df_monitoring_metadata_runtime_task_shard = df_monitoring.metadata_runtime.loc[
             (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name) &
             (df_monitoring.metadata_runtime['runtime_shard'] == shard)
-        ]
+            ]
         df_monitoring_task_shard = df_monitoring_task_shard.sort_values(
             by='metrics_timestamp'
         )
@@ -552,13 +609,18 @@ def plot_shards(
         # Calculate the duration of the task shard
         max_datetime = max(df_monitoring_task_shard['metrics_timestamp'])
         min_datetime = min(df_monitoring_task_shard['metrics_timestamp'])
-        task_shard_duration = round(datetime.timedelta.total_seconds(max_datetime - min_datetime))
+        task_shard_duration = round(
+            datetime.timedelta.total_seconds(max_datetime - min_datetime))
 
         # create an array for to hold the y values from the list columns
-        cpu_used_percent_array = [np.asarray(x).mean() for x in df_monitoring_task_shard.metrics_cpu_used_percent]
-        disk_used_gb_array = [np.asarray(x).max() for x in df_monitoring_task_shard.metrics_disk_used_gb]
-        disk_read_iops_array = [np.asarray(x).max() for x in df_monitoring_task_shard.metrics_disk_read_iops]
-        disk_write_iops_array = [np.asarray(x).max() for x in df_monitoring_task_shard.metrics_disk_write_iops]
+        cpu_used_percent_array = [np.asarray(x).mean() for x in
+                                  df_monitoring_task_shard.metrics_cpu_used_percent]
+        disk_used_gb_array = [np.asarray(x).max() for x in
+                              df_monitoring_task_shard.metrics_disk_used_gb]
+        disk_read_iops_array = [np.asarray(x).max() for x in
+                                df_monitoring_task_shard.metrics_disk_read_iops]
+        disk_write_iops_array = [np.asarray(x).max() for x in
+                                 df_monitoring_task_shard.metrics_disk_write_iops]
 
         # Creates a dictionary of runtime attributes
         runtime_dic = create_runtime_dict(df_monitoring_metadata_runtime_task_shard)
@@ -584,7 +646,8 @@ def plot_shards(
     return plt
 
 
-def plot_resource_usage(df_monitoring, parent_workflow_id, task_names):
+def plot_resource_usage(df_monitoring, parent_workflow_id, task_names, plt_height=2400,
+                        plt_width=600):
     """
     Creates a pdf file with resource usage plots for each task name
     @param df_monitoring:
@@ -593,27 +656,31 @@ def plot_resource_usage(df_monitoring, parent_workflow_id, task_names):
     @return:
     """
 
-    with PdfPages(parent_workflow_id + '_resource_monitoring.pdf') as pdf:
+    pdf_file_name = parent_workflow_id + '_resource_monitoring.pdf'
 
-        for task_name in task_names:
-            # Gets the all shards for a given task name
-            shards = df_monitoring.metadata_runtime.runtime_shard.loc[
-                (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name)]
-            shards = shards.sort_values().unique()
+    for task_name in task_names:
+        # Gets the all shards for a given task name
+        shards = df_monitoring.metadata_runtime.runtime_shard.loc[
+            (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name)]
+        shards = shards.sort_values().unique()
 
-            # If shard counts is greater than 10 then gets 10 longest running shards for a given task name
-            max_shards = 2
-            if len(shards) >= max_shards:
-                get_shard_summary(
-                    df_monitoring=df_monitoring,
-                    task_name=task_name,
-                    parent_workflow_id=parent_workflow_id,
-                    max_shards=max_shards,
-                    pdf=pdf
-                )
+        # If shard counts is greater than 10 then gets 10 longest running shards for a given task name
+        max_shards = 2
+        if len(shards) >= max_shards:
+            shard_sum_fig = get_shard_summary(
+                df_monitoring=df_monitoring,
+                task_name=task_name,
+                parent_workflow_id=parent_workflow_id,
+                max_shards=max_shards,
+                plt_height=plt_height,
+                plt_width=plt_width,
+            )
+            pio.write_image(shard_sum_fig, pdf_file_name, format='pdf')
+            shard_sum_fig.show()
 
-            # Create detailed resource usage plots
-            if len(shards) < max_shards:
+        # Create detailed resource usage plots
+        if len(shards) < max_shards:
+            with PdfPages(pdf_file_name) as pdf:
                 plot_shards(
                     df_monitoring=df_monitoring,
                     task_name=task_name,
