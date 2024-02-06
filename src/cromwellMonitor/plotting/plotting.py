@@ -6,12 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from bokeh.io import curdoc
-from bokeh.io import output_notebook, output_file, show
-from bokeh.layouts import layout
-from bokeh.models import ColumnDataSource, Div, Whisker
-from bokeh.models.widgets import DataTable, TableColumn
-from bokeh.plotting import figure
+from bokeh.io import output_file
+
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
@@ -24,60 +20,6 @@ from .data_processing import mean_of_string, get_1st_disk_usage, \
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def generate_bar_plot(data_dict: dict, title: str, total_duration: int):
-    """
-    Generate a bar plot using bokeh
-    @param data_dict:
-    @param title:
-    @param total_duration:
-    @return:
-    """
-
-    # Ensure total duration is positive integer
-    if total_duration < 0:
-        logger.warning("Total duration is negative. Setting to 0.")
-        total_duration = 0
-
-    # Extract data from the dictionary
-    categories = list(data_dict.keys())
-    values = list(data_dict.values())
-
-    # Create a Bokeh figure
-    p = figure(
-        x_range=categories,
-        height=350,
-        title=title,
-        toolbar_location=None,
-        tools="hover"
-    )
-
-    # Create bars using vbar with hover tooltips
-    p.vbar(
-        x=categories,
-        top=values,
-        width=0.5,
-        color='blue',
-        legend_label="Total Duration: {} seconds".format(total_duration),
-        hover_fill_color='orange'
-    )
-
-    # Customize plot aesthetics
-    curdoc().theme = 'caliber'
-    p.xaxis.axis_label = 'Tasks'  # Set x-axis label
-    p.yaxis.axis_label = 'Seconds'  # Set y-axis label
-    p.xaxis.major_label_orientation = 1.2
-    p.axis.axis_label_text_font_style = 'bold'  # Make axis labels bold
-    p.axis.axis_label_text_font_size = '12pt'  # Set axis label font size
-    p.axis.major_label_text_font_size = '10pt'  # Set tick label font size
-    p.axis.axis_label_standoff = 15  # Set distance of labels from axis
-    p.axis.visible = True
-    p.ygrid.grid_line_color = '#D3D3D3'
-    p.xgrid.grid_line_color = None
-    p.hover.tooltips = [("Task", "@x"), ("Seconds", "@top")]  # Add hover tooltips
-
-    return p
 
 
 def remove_nan(input_data: dict):
@@ -113,6 +55,7 @@ def generate_workflow_summary(
         df_task_summary_named: pd.DataFrame,
         task_summary_duration: dict,
         df_monitoring: pd.DataFrame,
+        make_pdf: bool = False
 ):
     """
     Generate a workflow summary html file using bokeh
@@ -125,37 +68,65 @@ def generate_workflow_summary(
 
     workflow_duration = calculate_workflow_duration(df_monitoring=df_monitoring)
 
-    # Place any outputs from bokeh into the following file
-    output_file("{}_workflow_summary.html".format(parent_workflow_id))
 
-    # Get Column names from pandas dataframe
-    Columns = [TableColumn(field=Ci, title=Ci) for Ci in
-               df_task_summary_named.columns]  # bokeh columns
 
-    # Create bokeh datatables using pandas dataframe and column names
-    task_summary_table = DataTable(columns=Columns, source=ColumnDataSource(
-        df_task_summary_named))  # bokeh table
+    # Create table using plotly
+    task_summary_table = go.Table(
+        header=dict(values=list(df_task_summary_named.columns),
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[df_task_summary_named[col] for col in df_task_summary_named.columns],
+                   fill_color='lavender',
+                   align='left'))
 
-    # Create pie plot for workflow duration
-    workflow_duration_pie = generate_bar_plot(data_dict=task_summary_duration,
-                                              total_duration=workflow_duration,
-                                              title="Workflow Duration in Seconds")
+    # Ensure total duration is positive integer
+    if workflow_duration < 0:
+        logger.warning(f"Total duration is negative.")
 
-    # Divs
-    workflow_title_div = Div(
-        text="<h1>{} <br> Workflow Summary</h2>".format(parent_workflow_id), width=800)
-    workflow_duration_div = Div(
-        text="The workflow took {} seconds to complete.".format(workflow_duration),
-        width=800)
+    workflow_duration_bar = plot_bar_plotly_using_dict(
+        data_dict=task_summary_duration,
+        x_legend_label="Tasks",
+        y_legend_label="Seconds",
+        legend_title=f'Total Workflow Duration: {workflow_duration} seconds',
+        show_legend=True,
+    )
 
-    # Place the outputs from bokeh in this layout, which will be the layout in html file _workflow_summary.html
-    show(layout([
-        [workflow_title_div],
-        [workflow_duration_div],
-        [Div(text="<h3>Workflow Summary Table</h3>", width=800)],
-        [task_summary_table],
-        [workflow_duration_pie]
-    ]))
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        vertical_spacing=0.1,
+        specs=[
+            [{"type": "table"}],
+            [{"type": "bar"}]
+        ],
+        subplot_titles=[
+            "Workflow Summary Table",
+            "Workflow Duration in Seconds"
+        ]
+    )
+
+    # Add plots to the subplots
+    fig.add_trace(task_summary_table, row=1, col=1)
+    fig.add_trace(workflow_duration_bar, row=2, col=1)
+
+    # Update Plot X Axis Title
+    fig.update_xaxes(title_text="Tasks", row=2, col=1)
+    # Update Plot Y Axis Title
+    fig.update_yaxes(title_text="Seconds", row=2, col=1)
+
+
+    fig.update_layout(
+        height=800,
+        width=800,
+        title_text="{} Workflow Summary".format(parent_workflow_id),
+        showlegend=False,
+    )
+    if make_pdf:
+        pio.write_image(
+            fig, "{}_workflow_summary.pdf".format(parent_workflow_id), format='pdf'
+        )
+
+    return fig
 
 
 def plot_bar_plotly(
@@ -165,7 +136,6 @@ def plot_bar_plotly(
     Plot a bar plot using Plotly
     @param x_value:
     @param y_value:
-    @param chart_title:
     @param y_label:
     @param x_label:
     @return:
@@ -173,6 +143,35 @@ def plot_bar_plotly(
 
     return go.Bar(x=x_value, y=y_value, x0=x_label, y0=y_label)
 
+def plot_bar_plotly_using_dict(
+        data_dict: dict,
+        x_legend_label: str,
+        y_legend_label: str,
+        show_legend: bool = False,
+        legend_title: str =None,
+):
+    """
+    Generate a bar plot using plotly
+    @param data_dict:
+    @param x_legend_label:
+    @param y_legend_label:
+    @param show_legend:
+    @param legend_title:
+    @return:
+    """
+
+    # Extract data from the dictionary
+    x_values = list(data_dict.keys())
+    y_values = list(data_dict.values())
+
+    # Create bars with hover tooltips
+    return go.Bar(
+        x=x_values,
+        y=y_values,
+        hovertemplate=f'{x_legend_label}: %{{x}}<br>{y_legend_label}: %{{y:,.0f}}<br>',
+        name=legend_title,
+        showlegend=show_legend
+    )
 
 def create_violin_plot_plotly(y_values: list, x_values: list , y_label: str, x_label: str):
     """
@@ -203,10 +202,11 @@ def create_violin_plot_plotly(y_values: list, x_values: list , y_label: str, x_l
     )
 
 
-
-def plot_1_metric(input_dataset: dict, title: str, y_label: str, x_label: str):
+def generate_resource_plots_and_outliers(
+        input_dataset: dict, y_label: str, x_label: str
+):
     """
-    Plot a violin plot and bar plot for a given resource
+    Generate an outlier table, plot a violin plot and bar plot for a given resource
     @param input_dataset:
     @param title:
     @param y_label:
@@ -295,33 +295,28 @@ def plot_shard_summary(
 
     output_file("{}_{}_shard_summary.html".format(parent_workflow_id, task_name_input))
 
-    p_cpu_a = plot_1_metric(
+    p_cpu_a = generate_resource_plots_and_outliers(
         input_dataset=average_cpu_per_shard_sorted_dict,
-        title="Average CPU Usage Per Shard",
         y_label="CPU Usage",
         x_label="Shards"
     )
-    p_cpu_m = plot_1_metric(
+    p_cpu_m = generate_resource_plots_and_outliers(
         input_dataset=max_cpu_per_shard_sorted_dict,
-        title="Max CPU Usage Per Shard",
         y_label="CPU Usage",
         x_label="Shards"
     )
-    p_mem_m = plot_1_metric(
+    p_mem_m = generate_resource_plots_and_outliers(
         input_dataset=max_memory_per_shard_sorted_dict,
-        title="Max Memory Usage Per Shard",
         y_label="Memory Usage GB",
         x_label="Shards"
     )
-    p_dis_m = plot_1_metric(
+    p_dis_m = generate_resource_plots_and_outliers(
         input_dataset=max_disk_per_shard_sorted_dict,
-        title="Max Disk Usage Per Shard",
         y_label="Disk Usage GB",
         x_label="Shards"
     )
-    p_dur = plot_1_metric(
+    p_dur = generate_resource_plots_and_outliers(
         input_dataset=duration_per_shard_sorted_dict,
-        title="Time Duration Per Shard",
         y_label="Seconds",
         x_label="Shards"
     )
