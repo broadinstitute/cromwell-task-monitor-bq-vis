@@ -15,7 +15,8 @@ import plotly.offline as pyo
 import plotly.graph_objects as go
 
 from .data_processing import mean_of_string, get_1st_disk_usage, \
-    create_outlier_table_plotly
+    get_outliers
+from ..table import utils as tableUtils
 
 import logging
 
@@ -50,34 +51,124 @@ def calculate_workflow_duration(df_monitoring) -> int:
     return workflow_duration
 
 
+def get_task_summary(df_monitoring):
+    """
+    Get the task name and duration summary for a given workflow monitoring dataframe
+    :param df_monitoring: The dataframe containing the monitoring metrics.
+    :return:
+    """
+    all_task_names = df_monitoring.metrics_runtime.runtime_task_call_name.unique()
+    task_summary_dict = tableUtils.get_task_summary(
+        task_names=all_task_names, df=df_monitoring.metrics_runtime
+    )
+    task_summary_duration = tableUtils.get_task_summary_duration(
+        task_summary_dict=task_summary_dict
+    )
+    df_task_summary = pd.DataFrame.from_dict(task_summary_dict)
+    df_task_summary_T = df_task_summary.T.rename_axis('Tasks').reset_index()
+    df_task_summary_named = df_task_summary_T.rename(
+        columns={0: "Duration", 1: "Shards"},
+        errors="raise"
+    )
+    return df_task_summary_named, task_summary_duration
+
+
+def create_plotly_table(df_input: pd.DataFrame):
+    """
+    Create a plotly table from a given dataframe
+    :param df_input: The dataframe to be converted to a plotly table
+    :return:
+    """
+    return go.Table(
+        header=dict(
+            values=list(df_input.columns),
+            fill_color='paleturquoise', align='left'
+        ),
+        cells=dict(
+            values=[df_input[col] for col in df_input.columns],
+            fill_color='lavender',
+            align='left',
+        )
+    )
+
+
+def create_outlier_table_plotly(shards: list, resource_value: list, resource_label: str):
+    """
+    Create plotly tables for upper and lower outliers
+    @param shards: The list of shards
+    @param resource_value: The list of resource values
+    @param resource_label: The label of the resource
+    @return:
+    """
+    (lower_outliers, upper_outliers) = get_outliers(
+        shards=shards, resource_value=resource_value, resource_label=resource_label
+    )
+
+    upper_table = create_plotly_table(df_input=upper_outliers)
+
+    lower_table = create_plotly_table(df_input=lower_outliers)
+
+    return upper_table, lower_table
+
+def create_workflow_summary_subplot_figure(
+    workflow_task_summary_table: go.Table,
+    workflow_duration_bar: go.Bar,
+    parent_workflow_id: str
+):
+    """
+    Create a subplot figure for the workflow summary
+    :param workflow_task_summary_table: The workflow task summary table
+    :param workflow_duration_bar: The workflow duration bar plot
+    :param parent_workflow_id: The parent workflow id
+    :return:
+    """
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        vertical_spacing=0.1,
+        specs=[[{"type": "table"}], [{"type": "bar"}]],
+        subplot_titles=["Workflow Summary Table", "Workflow Duration in Seconds"]
+    )
+
+    # Add plots to the subplots
+    fig.add_trace(workflow_task_summary_table, row=1, col=1)
+    fig.add_trace(workflow_duration_bar, row=2, col=1)
+
+    # Update Plot X Axis Title
+    fig.update_xaxes(title_text="Tasks", row=2, col=1)
+    # Update Plot Y Axis Title
+    fig.update_yaxes(title_text="Seconds", row=2, col=1)
+
+    fig.update_layout(
+        height=800,
+        width=800,
+        title_text="{} Workflow Summary".format(parent_workflow_id),
+        showlegend=False,
+    )
+
+    return fig
+
+
 def generate_workflow_summary(
         parent_workflow_id: str,
-        df_task_summary_named: pd.DataFrame,
-        task_summary_duration: dict,
         df_monitoring: pd.DataFrame,
         make_pdf: bool = False
 ):
     """
     Generate a workflow summary html file using bokeh
-    @param parent_workflow_id:
-    @param df_task_summary_named:
-    @param task_summary_duration:
-    @param df_monitoring:
+    @param parent_workflow_id: The parent workflow id
+    @param df_task_summary_named: The dataframe containing the task summary
+    @param task_summary_duration: The task summary duration
+    @param df_monitoring: The dataframe containing the monitoring metrics
     @return:
     """
 
     workflow_duration = calculate_workflow_duration(df_monitoring=df_monitoring)
 
-
+    df_task_summary_named, task_summary_duration = get_task_summary(df_monitoring)
 
     # Create table using plotly
-    task_summary_table = go.Table(
-        header=dict(values=list(df_task_summary_named.columns),
-                    fill_color='paleturquoise',
-                    align='left'),
-        cells=dict(values=[df_task_summary_named[col] for col in df_task_summary_named.columns],
-                   fill_color='lavender',
-                   align='left'))
+    workflow_task_summary_table = create_plotly_table(df_input=df_task_summary_named)
 
     # Ensure total duration is positive integer
     if workflow_duration < 0:
@@ -91,36 +182,12 @@ def generate_workflow_summary(
         show_legend=True,
     )
 
-    fig = make_subplots(
-        rows=2,
-        cols=1,
-        vertical_spacing=0.1,
-        specs=[
-            [{"type": "table"}],
-            [{"type": "bar"}]
-        ],
-        subplot_titles=[
-            "Workflow Summary Table",
-            "Workflow Duration in Seconds"
-        ]
+    fig = create_workflow_summary_subplot_figure(
+        workflow_task_summary_table=workflow_task_summary_table,
+        workflow_duration_bar=workflow_duration_bar,
+        parent_workflow_id=parent_workflow_id,
     )
 
-    # Add plots to the subplots
-    fig.add_trace(task_summary_table, row=1, col=1)
-    fig.add_trace(workflow_duration_bar, row=2, col=1)
-
-    # Update Plot X Axis Title
-    fig.update_xaxes(title_text="Tasks", row=2, col=1)
-    # Update Plot Y Axis Title
-    fig.update_yaxes(title_text="Seconds", row=2, col=1)
-
-
-    fig.update_layout(
-        height=800,
-        width=800,
-        title_text="{} Workflow Summary".format(parent_workflow_id),
-        showlegend=False,
-    )
     if make_pdf:
         pio.write_image(
             fig, "{}_workflow_summary.pdf".format(parent_workflow_id), format='pdf'
@@ -152,11 +219,11 @@ def plot_bar_plotly_using_dict(
 ):
     """
     Generate a bar plot using plotly
-    @param data_dict:
-    @param x_legend_label:
-    @param y_legend_label:
-    @param show_legend:
-    @param legend_title:
+    @param data_dict: The dictionary containing the data
+    @param x_legend_label: The x axis label
+    @param y_legend_label: The y axis label
+    @param show_legend: Whether to show the legend
+    @param legend_title: The title of the legend
     @return:
     """
 
@@ -173,13 +240,15 @@ def plot_bar_plotly_using_dict(
         showlegend=show_legend
     )
 
-def create_violin_plot_plotly(y_values: list, x_values: list , y_label: str, x_label: str):
+def create_violin_plot_plotly(
+    y_values: list, x_values: list , y_label: str, x_label: str
+):
     """
     Create a violin plot with outliers marked using Plotly
-    @param title:
-    @param data:
-    @param y_label:
-    @param x_label:
+    @param title: The title of the plot
+    @param data: The data to be plotted
+    @param y_label: The y axis label
+    @param x_label: The x axis label
     @return:
     """
     # Create a DataFrame from the data
@@ -208,9 +277,9 @@ def generate_resource_plots_and_outliers(
     """
     Generate an outlier table, plot a violin plot and bar plot for a given resource
     @param input_dataset:
-    @param title:
-    @param y_label:
-    @param x_label:
+    @param title: The title of the plot
+    @param y_label: The y axis label
+    @param x_label: The x axis label
     @return:
     """
 
@@ -231,6 +300,15 @@ def plot_shard_summary(
         parent_workflow_id: str, df_input: pd.DataFrame, task_name_input: str,
         plt_height: int = None, plt_width: int = None
 ):
+    """
+    Plot the shard summary for a given task name
+    :param parent_workflow_id: The parent workflow id
+    :param df_input: The dataframe containing the monitoring metrics
+    :param task_name_input: The task name
+    :param plt_height: Height of the plot
+    :param plt_width: Width of the plot
+    :return:
+    """
     # Removes shards with null in columns being measured.
     df_droped_na = df_input.metrics_runtime.dropna(
         subset=['meta_duration_sec', 'metrics_disk_used_gb', 'metrics_mem_used_gb',

@@ -62,32 +62,4 @@ def get_outliers(
     return lower_outliers, upper_outliers
 
 
-def create_outlier_table_plotly(shards: list, resource_value: list, resource_label: str):
-    """
-    Create plotly tables for upper and lower outliers
-    @param shards:
-    @param resource_value:
-    @param resource_label:
-    @return:
-    """
-    (lower_outliers, upper_outliers) = get_outliers(
-        shards=shards, resource_value=resource_value, resource_label=resource_label
-    )
 
-    upper_table = go.Table(
-        header=dict(values=list(upper_outliers.columns),
-                    fill_color='paleturquoise',
-                    align='left'),
-        cells=dict(values=[upper_outliers[col] for col in upper_outliers.columns],
-                   fill_color='lavender',
-                   align='left'))
-
-    lower_table = go.Table(
-        header=dict(values=list(lower_outliers.columns),
-                    fill_color='paleturquoise',
-                    align='left'),
-        cells=dict(values=[lower_outliers[col] for col in lower_outliers.columns],
-                   fill_color='lavender',
-                   align='left'))
-
-    return upper_table, lower_table
