@@ -153,7 +153,7 @@ def generate_workflow_summary(
         parent_workflow_id: str,
         df_monitoring: pd.DataFrame,
         make_pdf: bool = False
-):
+) -> go.Figure:
     """
     Generate a workflow summary html file using bokeh
     @param parent_workflow_id: The parent workflow id
@@ -298,7 +298,7 @@ def generate_resource_plots_and_outliers(
 
 def plot_shard_summary(
         parent_workflow_id: str, df_input: pd.DataFrame, task_name_input: str,
-        plt_height: int = None, plt_width: int = None
+        plt_height: int = 5000, plt_width: int = 1200
 ):
     """
     Plot the shard summary for a given task name
@@ -512,8 +512,8 @@ def get_shard_summary(
         task_name: str,
         parent_workflow_id: str,
         max_shards: int,
-        plt_height: int = 5000,
-        plt_width: int = 1200,
+        plt_height: int = None,
+        plt_width: int = None,
 ):
     """
     Creates a pdf file with resource usage plots for each task name
@@ -561,10 +561,14 @@ def plot_detailed_resource_usage(
         runtime_dic: dict,
         disk_used_gb_array: list,
         disk_read_iops_array: list,
-        disk_write_iops_array: list
+        disk_write_iops_array: list,
+        plt_height: int = 2000,
+        plt_width: int = 1200,
 ) -> plt:
     """
-    Creates a plot with resource usage figure for a given task and its shard
+    Creates a plot with resource usage figure for a given
+    task and its shard using matplotlib.
+
     @param task_name:
     @param shard_number:
     @param task_shard_duration:
@@ -577,7 +581,11 @@ def plot_detailed_resource_usage(
     @return:
     """
     # For size and style of plots
-    plt.rcParams["figure.figsize"] = (15, 20)
+    dpi = 100
+    figsize = (plt_width/dpi, plt_height/dpi)  # width, height in inches
+    plt.rcParams["figure.figsize"] = figsize
+    plt.rcParams["figure.dpi"] = dpi
+    # plt.rcParams["figure.figsize"] = (15, 20)
     sns.set(style="whitegrid")
 
     cpu_plt = plt.subplot(5, 1, 1)
@@ -665,7 +673,22 @@ def plot_detailed_resource_usage(
 
 
 def plot_shards(
-        df_monitoring: pd.DataFrame, task_name: str, shards, pdf):
+    df_monitoring: pd.DataFrame,
+    task_name: str,
+    shards,
+    plt_height: int = None,
+    plt_width: int = None,
+) -> plt:
+    """
+    Plot the shards for a given task name
+    :param plt_width:
+    :param plt_height:
+    :param df_monitoring:
+    :param task_name:
+    :param shards:
+    :param pdf:
+    :return:
+    """
     for shard in shards:
         df_monitoring_task_shard = df_monitoring.metrics_runtime.loc[
             (df_monitoring.metrics_runtime['runtime_task_call_name'] == task_name) &
@@ -709,24 +732,32 @@ def plot_shards(
             runtime_dic=runtime_dic,
             disk_used_gb_array=disk_used_gb_array,
             disk_read_iops_array=disk_read_iops_array,
-            disk_write_iops_array=disk_write_iops_array
+            disk_write_iops_array=disk_write_iops_array,
+            plt_height=plt_height,
+            plt_width=plt_width,
         )
 
         resource_plt.subplots_adjust(hspace=0.5)
-        pdf.savefig(bbox_inches='tight', pad_inches=0.5)
-        plt.show()
-        plt.close()
     return plt
 
 
-def plot_resource_usage(df_monitoring, parent_workflow_id, task_names, plt_height=2400,
-                        plt_width=600):
+def plot_resource_usage(
+    df_monitoring,
+    parent_workflow_id,
+    task_names,
+    plt_height: int = None,
+    plt_width: int = None,
+) -> go.Figure or plt:
     """
     Creates a pdf file with resource usage plots for each task name
     @param df_monitoring:
     @param parent_workflow_id:
     @param task_names:
     @return:
+    :param plt_width:
+    :param plt_height:
+    :param plt_height:
+    :param plt_width:
     """
 
     pdf_file_name = parent_workflow_id + '_resource_monitoring.pdf'
@@ -750,16 +781,23 @@ def plot_resource_usage(df_monitoring, parent_workflow_id, task_names, plt_heigh
             )
             pio.write_image(shard_sum_fig, pdf_file_name, format='pdf')
             shard_sum_fig.show()
+            return shard_sum_fig
 
         # Create detailed resource usage plots
         if len(shards) < max_shards:
-            with PdfPages(pdf_file_name) as pdf:
-                plot_shards(
-                    df_monitoring=df_monitoring,
-                    task_name=task_name,
-                    shards=shards,
-                    pdf=pdf
-                )
+            # with PdfPages(pdf_file_name) as pdf:
+            task_detailed_plts = plot_shards(
+                df_monitoring=df_monitoring,
+                task_name=task_name,
+                shards=shards,
+                plt_height=plt_height,
+                plt_width=plt_width
+            )
+            task_detailed_plts.savefig(
+                pdf_file_name, bbox_inches='tight', pad_inches=0.5, format='pdf'
+            )
+            task_detailed_plts.show()
+            return task_detailed_plts
 
 
 def create_runtime_dict(
