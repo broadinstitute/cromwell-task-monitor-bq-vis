@@ -808,19 +808,18 @@ def create_runtime_dict(
     @param df_monitoring_metadata_runtime_task_shard:
     @return:
     """
+
+    first_shard = df_monitoring_metadata_runtime_task_shard.iloc[0]
+
     runtime_dic = {
-        "available_cpu_cores": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'runtime_cpu_count'],
-        "available_mem_gb": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'runtime_mem_total_gb'].round(2),
-        "available_disk_gb": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'runtime_disk_total_gb'][0].round(2),
-        "requested_cpu_cores": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'meta_cpu'],
-        "requested_mem_gb": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'meta_mem_total_gb'],
-        # meta_disk_total_gb is a list of disk sizes even if there is only one disk
-        "requested_disk_gb": df_monitoring_metadata_runtime_task_shard.iloc[0].at[
-            'meta_disk_total_gb'][0].round(2)
+        "available_cpu_cores": first_shard.at['runtime_cpu_count'],
+        "available_mem_gb": first_shard.at['runtime_mem_total_gb'].round(2),
+        "available_disk_gb": first_shard.at['runtime_disk_total_gb'][0].round(2),
+        "requested_cpu_cores": first_shard.at['meta_cpu'],
+        "requested_mem_gb": first_shard.at['meta_mem_total_gb'],
+        "requested_disk_gb": first_shard.at['meta_disk_total_gb'].round(2) if
+        isinstance(first_shard.at['meta_disk_total_gb'], float)
+        else first_shard.at['meta_disk_total_gb'][0].round(2)
     }
+
     return runtime_dic

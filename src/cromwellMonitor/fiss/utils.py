@@ -4,7 +4,6 @@ from typing import List, Dict, Any
 from datetime import datetime
 from ..logging import logging as log
 
-
 SUBMISSION_COLUMNS = [
     'submitter', 'status', 'submissionId', 'submissionDate', 'workflowStatuses'
 ]
@@ -14,7 +13,7 @@ WORKFLOW_COLUMNS = ['workflowId', 'status', 'statusLastChangedDate', 'messages']
 def get_list_of_submissions(
         workspace_namespace: str,
         workspace_name: str,
-        submission_columns=None
+        submission_columns: list = None
 ) -> pd.DataFrame:
     """
     Get a list of submissions for a workspace
@@ -135,6 +134,7 @@ class Workflow:
     """
     A class to represent a workflow
     """
+
     def __init__(
             self,
             workspace_namespace: str,
@@ -217,5 +217,3 @@ class Workflow:
         )
 
         return ids
-
-
