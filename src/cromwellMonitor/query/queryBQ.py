@@ -4,9 +4,10 @@ import datetime
 
 import google.auth
 from google.cloud import bigquery
+from google.api_core.exceptions import NotFound
 
 import concurrent.futures
-
+from ..logging import logging as log
 import pandas as pd
 
 
@@ -142,8 +143,18 @@ class QueryBQToMonitor:
 
           AND metadata.workflow_id IN ({self.formated_workflow_ids})    
         """
-        self.metadata = self.bq_client.query(query=metadata_sql).to_dataframe()
-        self.logger.info("Fetched metadata table")
+        try:
+            self.metadata = self.bq_client.query(query=metadata_sql).to_dataframe()
+            self.logger.info("Fetched metadata table")
+        except NotFound as e:
+            # Todo: add a fiss function that attempts to fetch the metadata table again
+            log.handle_bq_warning(
+                err=e,
+                message="Error fetching metadata table, replacing with empty dataframe."
+            )
+            # create empty metadata dataframe
+            self.metadata = pd.DataFrame()
+
 
     def _get_metrics(self):
 

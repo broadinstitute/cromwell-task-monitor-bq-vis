@@ -817,6 +817,7 @@ def create_runtime_dict(
         "available_disk_gb": first_shard.at['runtime_disk_total_gb'][0].round(2),
         "requested_cpu_cores": first_shard.at['meta_cpu'],
         "requested_mem_gb": first_shard.at['meta_mem_total_gb'],
+        # Todo: Fix the following line so its not returning None
         "requested_disk_gb": None if np.isnan(first_shard.at['meta_disk_total_gb'])
         else first_shard.at['meta_disk_total_gb'].round(2)
         if isinstance(first_shard.at['meta_disk_total_gb'], float)

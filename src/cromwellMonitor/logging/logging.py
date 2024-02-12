@@ -16,3 +16,9 @@ def handle_runtime_error(err):
 def handle_firecloud_server_error(err, message):
     logging.error(f"FISS ERROR: {message}: {err}")
 
+def handle_bq_error(err, message):
+    logging.error(f"BigQuery ERROR: {message}: {err}")
+
+def handle_bq_warning(err, message):
+    logging.warning(f"BigQuery WARNING: {message}: {err}")
+
