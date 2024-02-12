@@ -10,6 +10,19 @@ import concurrent.futures
 from ..logging import logging as log
 import pandas as pd
 
+METADATA_COLUMNS = ['meta_attempt', 'meta_cpu', 'meta_disk_mounts', 'meta_disk_total_gb',
+       'meta_disk_types', 'meta_docker_image', 'meta_end_time',
+       'meta_execution_status', 'meta_inputs', 'meta_instance_name',
+       'meta_mem_total_gb', 'meta_preemptible', 'meta_project_id',
+       'meta_shard', 'meta_start_time', 'meta_task_call_name',
+       'meta_workflow_id', 'meta_workflow_name', 'meta_zone',
+       'meta_duration_sec', 'runtime_attempt', 'runtime_cpu_count',
+       'runtime_cpu_platform', 'runtime_disk_mounts', 'runtime_disk_total_gb',
+       'runtime_instance_id', 'runtime_instance_name', 'runtime_mem_total_gb',
+       'runtime_preemptible', 'runtime_project_id', 'runtime_shard',
+       'runtime_start_time', 'runtime_task_call_name', 'runtime_workflow_id',
+       'runtime_zone']
+
 
 class QueryBQToMonitor:
     """
@@ -21,10 +34,12 @@ class QueryBQToMonitor:
     """
 
     def __init__(self, workflow_ids, days_back_upper_bound, days_back_lower_bound,
-                 bq_goolge_project):
+                 bq_goolge_project, debug=False):
 
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
 
         h = logging.StreamHandler(sys.stderr)
         h.flush = sys.stderr.flush
@@ -105,6 +120,7 @@ class QueryBQToMonitor:
 
           AND runtime.workflow_id IN ({self.formated_workflow_ids})    
         """
+        self.logger.debug(f"Runtime SQL: {runtime_sql}")
         self.runtime = self.bq_client.query(query=runtime_sql).to_dataframe()
         self.logger.info("Fetched runtime table.")
 
@@ -144,6 +160,7 @@ class QueryBQToMonitor:
           AND metadata.workflow_id IN ({self.formated_workflow_ids})    
         """
         try:
+            logging.debug(f"Metadata SQL: {metadata_sql}")
             self.metadata = self.bq_client.query(query=metadata_sql).to_dataframe()
             self.logger.info("Fetched metadata table")
         except NotFound as e:
@@ -153,7 +170,7 @@ class QueryBQToMonitor:
                 message="Error fetching metadata table, replacing with empty dataframe."
             )
             # create empty metadata dataframe
-            self.metadata = pd.DataFrame()
+            self.metadata = pd.DataFrame({column: [] for column in METADATA_COLUMNS})
 
 
     def _get_metrics(self):
@@ -251,4 +268,5 @@ class QueryBQToMonitor:
           AND metrics.instance_id IN ({ids_string})
 
         """
+        logging.debug(f"Metrics SQL: {metrics_sql}")
         return self.bq_client.query(metrics_sql).to_dataframe()
