@@ -163,6 +163,7 @@ class QueryBQToMonitor:
             logging.debug(f"Metadata SQL: {metadata_sql}")
             self.metadata = self.bq_client.query(query=metadata_sql).to_dataframe()
             self.logger.info("Fetched metadata table")
+
         except NotFound as e:
             # Todo: add a fiss function that attempts to fetch the metadata table again
             log.handle_bq_warning(
@@ -171,6 +172,8 @@ class QueryBQToMonitor:
             )
             # create empty metadata dataframe
             self.metadata = pd.DataFrame({column: [] for column in METADATA_COLUMNS})
+
+        self.logger.debug(f"Metadata table shape: {self.metadata.shape}")
 
 
     def _get_metrics(self):
