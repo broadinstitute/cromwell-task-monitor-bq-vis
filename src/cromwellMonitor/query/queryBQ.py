@@ -10,18 +10,51 @@ import concurrent.futures
 from ..logging import logging as log
 import pandas as pd
 
-METADATA_COLUMNS = ['meta_attempt', 'meta_cpu', 'meta_disk_mounts', 'meta_disk_total_gb',
-       'meta_disk_types', 'meta_docker_image', 'meta_end_time',
-       'meta_execution_status', 'meta_inputs', 'meta_instance_name',
-       'meta_mem_total_gb', 'meta_preemptible', 'meta_project_id',
-       'meta_shard', 'meta_start_time', 'meta_task_call_name',
-       'meta_workflow_id', 'meta_workflow_name', 'meta_zone',
-       'meta_duration_sec', 'runtime_attempt', 'runtime_cpu_count',
-       'runtime_cpu_platform', 'runtime_disk_mounts', 'runtime_disk_total_gb',
-       'runtime_instance_id', 'runtime_instance_name', 'runtime_mem_total_gb',
-       'runtime_preemptible', 'runtime_project_id', 'runtime_shard',
-       'runtime_start_time', 'runtime_task_call_name', 'runtime_workflow_id',
-       'runtime_zone']
+METADATA_COLUMNS = [
+    'meta_attempt',
+    'meta_cpu',
+    'meta_disk_mounts',
+    'meta_disk_total_gb',
+    'meta_disk_types',
+    'meta_docker_image',
+    'meta_end_time',
+    'meta_execution_status',
+    'meta_inputs',
+    'meta_instance_name',
+    'meta_mem_total_gb',
+    'meta_preemptible',
+    'meta_project_id',
+    'meta_shard',
+    'meta_start_time',
+    'meta_task_call_name',
+    'meta_workflow_id',
+    'meta_workflow_name',
+    'meta_zone',
+    'meta_duration_sec'
+]
+
+METADATA_COLUMNS_TYPES = {
+    'meta_attempt': 'Int64',
+    'meta_cpu': 'Int64',
+    'meta_disk_mounts': 'object',
+    'meta_disk_total_gb': 'object',
+    'meta_disk_types': 'object',
+    'meta_docker_image': 'object',
+    'meta_end_time': 'datetime64[us, UTC]',
+    'meta_execution_status': 'object',
+    'meta_inputs': 'object',
+    'meta_instance_name': 'object',
+    'meta_mem_total_gb': 'float64',
+    'meta_preemptible': 'boolean',
+    'meta_project_id': 'object',
+    'meta_shard': 'Int64',
+    'meta_start_time': 'datetime64[us, UTC]',
+    'meta_task_call_name': 'object',
+    'meta_workflow_id': 'object',
+    'meta_workflow_name': 'object',
+    'meta_zone': 'object',
+    'meta_duration_sec': 'Int64'
+}
 
 
 class QueryBQToMonitor:
@@ -172,6 +205,7 @@ class QueryBQToMonitor:
             )
             # create empty metadata dataframe
             self.metadata = pd.DataFrame({column: [] for column in METADATA_COLUMNS})
+            self.metadata = self.metadata.astype(METADATA_COLUMNS_TYPES)
 
         self.logger.debug(f"Metadata table shape: {self.metadata.shape}")
 
