@@ -130,6 +130,37 @@ def _days_from_today(date):
     return difference.days
 
 
+def get_workflow_metadata_api_call(
+        namespace,
+        workspace,
+        submission_id,
+        workflow_id,
+        expand_sub_sorkflows=False,
+):
+    """Request the metadata for a workflow in a submission.
+    Modified version of the FireCloud API call to get workflow metadata
+
+    Args:
+        namespace (str): project to which workspace belongs
+        workspace (str): Workspace name
+        submission_id (str): Submission's unique identifier
+        workflow_id (str): Workflow's unique identifier.
+        expand_sub_sorkflows (bool, optional): Whether to expand subworkflows. Defaults to False.
+
+    Swagger:
+        https://api.firecloud.org/#!/Submissions/workflowMetadata
+    """
+
+    uri = "workspaces/{0}/{1}/submissions/{2}/workflows/{3}".format(namespace,
+                                                                       workspace,
+                                                                       submission_id,
+                                                                       workflow_id)
+    if expand_sub_sorkflows:
+        uri += "?expandSubWorkflows=true"
+
+    return fapi.__get(uri)
+
+
 class Workflow:
     """
     A class to represent a workflow
@@ -179,11 +210,12 @@ class Workflow:
         @param workflow_id: the workflow id
         @return: a dictionary of workflow metadata
         """
-        response_workflow_metadata = fapi.get_workflow_metadata(
+        response_workflow_metadata = get_workflow_metadata_api_call(
             namespace=self.workspace_namespace,
             workspace=self.workspace_name,
             submission_id=self.submission_id,
-            workflow_id=self.parent_workflow_id
+            workflow_id=self.parent_workflow_id,
+            expand_sub_sorkflows=True,
         )
         print("Status code:", response_workflow_metadata.status_code)
         response_workflow_metadata_json = response_workflow_metadata.json()
