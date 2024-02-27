@@ -134,8 +134,7 @@ def calculate_shard_metrics(summary_shards, metrics_runtime, task_name_input, me
         max_disk_per_shard_dict[str(shard)] = df_summary_shard.metrics_disk_used_gb.apply(
             get_1st_disk_usage).max()
 
-        duration_per_shard_dict[str(shard)] = df_summary_shard['meta_duration_sec'].iloc[0]
-        duration_per_shard_dict = {k: v if pd.notna(v) else 0 for k, v in duration_per_shard_dict.items()}
+        duration_per_shard_dict[str(shard)] = df_summary_shard['metrics_duration_sec'].iloc[0]
 
     return remove_nan(average_cpu_per_shard_dict), remove_nan(max_cpu_per_shard_dict), remove_nan(max_memory_per_shard_dict), remove_nan(max_disk_per_shard_dict), remove_nan(duration_per_shard_dict)
 

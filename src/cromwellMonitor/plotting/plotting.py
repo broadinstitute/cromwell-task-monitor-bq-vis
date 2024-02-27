@@ -51,6 +51,8 @@ def get_task_summary(df_monitoring):
     :param df_monitoring: The dataframe containing the monitoring metrics.
     :return:
     """
+    # Todo: Update such that it retrieves task duration for the new
+    #  metrics_duration_sec column
     all_task_names = df_monitoring.metrics_runtime.runtime_task_call_name.unique()
     task_summary_dict = tableUtils.get_task_summary(
         task_names=all_task_names, df=df_monitoring.metrics_runtime
@@ -103,6 +105,7 @@ def create_outlier_table_plotly(shards: list, resource_value: list, resource_lab
     lower_table = create_plotly_table(df_input=lower_outliers)
 
     return upper_table, lower_table
+
 
 def create_workflow_summary_subplot_figure(
     workflow_task_summary_table: go.Table,
@@ -308,6 +311,7 @@ def plot_shard_summary(
     df_filled = fill_na_with_zero(
         df=metrics_runtime,
         columns=[
+            'metrics_duration_sec',
             'meta_duration_sec',
             'metrics_disk_used_gb',
             'metrics_mem_used_gb',
@@ -708,7 +712,6 @@ def plot_resource_usage(
                 plt_width=plt_width,
             )
             pio.write_image(shard_sum_fig, pdf_file_name, format='pdf')
-            shard_sum_fig.show()
             return shard_sum_fig
 
         # Create detailed resource usage plots

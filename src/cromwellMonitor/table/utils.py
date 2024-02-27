@@ -79,6 +79,7 @@ def create_metrics_runtime_table(metrics: pd.DataFrame, metadata_runtime: pd.Dat
                 'runtime_task_call_name',
                 'runtime_shard',
                 'runtime_instance_id',
+                'metrics_duration_sec',
                 'meta_duration_sec'
             ]
         ],

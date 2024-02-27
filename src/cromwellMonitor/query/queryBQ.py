@@ -142,11 +142,26 @@ class QueryBQToMonitor:
           runtime.start_time AS runtime_start_time,
           runtime.task_call_name AS runtime_task_call_name,
           runtime.workflow_id AS runtime_workflow_id,
-          runtime.zone AS runtime_zone
+          runtime.zone AS runtime_zone,
+          TIMESTAMP_DIFF(metrics.max_timestamp, metrics.min_timestamp, SECOND) AS metrics_duration_sec
 
         FROM
           `{self.bq_goolge_project}.cromwell_monitoring.runtime`  runtime 
-
+        LEFT JOIN (
+            SELECT
+                metrics.instance_id,
+                MIN(metrics.timestamp) AS min_timestamp,
+                MAX(metrics.timestamp) AS max_timestamp
+            FROM
+                `{self.bq_goolge_project}.cromwell_monitoring.metrics` metrics
+            WHERE
+                DATE(metrics.timestamp) >= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_upper_bound} DAY)
+                AND DATE(metrics.timestamp) <= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_lower_bound} DAY)
+            GROUP BY
+                metrics.instance_id
+        ) metrics
+        ON
+            runtime.instance_id = metrics.instance_id
         WHERE
               DATE(runtime.start_time) >= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_upper_bound} DAY)
           AND DATE(runtime.start_time) <= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_lower_bound} DAY)
