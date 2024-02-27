@@ -1,4 +1,5 @@
 import datetime
+import json
 from math import isnan
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
@@ -15,22 +16,15 @@ import plotly.offline as pyo
 import plotly.graph_objects as go
 
 from .data_processing import mean_of_string, get_1st_disk_usage, \
-    get_outliers
+    get_outliers, fill_na_with_zero, calculate_shard_metrics
 from ..table import utils as tableUtils
+from ..logging import logging as log
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def remove_nan(input_data: dict):
-    """
-    Remove nan values from a dictionary
-    @param input_data:
-    @return:
-    """
-    clean_dict = {k: input_data[k] for k in input_data if not isnan(input_data[k])}
-    return clean_dict
 
 
 def calculate_workflow_duration(df_monitoring) -> int:
@@ -297,62 +291,40 @@ def generate_resource_plots_and_outliers(
 
 
 def plot_shard_summary(
-        parent_workflow_id: str, df_input: pd.DataFrame, task_name_input: str,
+        parent_workflow_id: str, metrics_runtime: pd.DataFrame, task_name_input: str,
         plt_height: int = 5000, plt_width: int = 1200
 ):
     """
     Plot the shard summary for a given task name
     :param parent_workflow_id: The parent workflow id
-    :param df_input: The dataframe containing the monitoring metrics
+    :param metrics_runtime: The dataframe containing the monitoring metrics
     :param task_name_input: The task name
     :param plt_height: Height of the plot
     :param plt_width: Width of the plot
     :return:
     """
-    # Removes shards with null in columns being measured.
-    df_droped_na = df_input.metrics_runtime.dropna(
-        subset=['meta_duration_sec', 'metrics_disk_used_gb', 'metrics_mem_used_gb',
-                'metrics_mem_used_gb', 'metrics_cpu_used_percent'])
+
+    # print warning if na values are present
+    df_filled = fill_na_with_zero(
+        df=metrics_runtime,
+        columns=[
+            'meta_duration_sec',
+            'metrics_disk_used_gb',
+            'metrics_mem_used_gb',
+            'metrics_cpu_used_percent'
+        ]
+    )
 
     # put dataframe into and array
-    summary_shards = df_droped_na.runtime_shard.loc[
-        (df_droped_na['runtime_task_call_name'] == task_name_input)].unique()
+    summary_shards = df_filled.runtime_shard.loc[
+        (df_filled['runtime_task_call_name'] == task_name_input)].unique()
 
-    # For each element in sereas get the average cpu, max cpu, max mem, max disk
-    # usage from monitoring datafram put in a dict
-    average_cpu_per_shard_dict = {}
-    max_cpu_per_shard_dict = {}
-    max_memory_per_shard_dict = {}
-    max_disk_per_shard_dict = {}
-    duration_per_shard_dict = {}
-    # for shard in summary_shards[0:99]: #used to test code on 100 shards
-    for shard in summary_shards:
-        # create dataframe for a given task name and shard
-        df_summary_shard = df_input.metrics_runtime.loc[
-            (df_input.metrics_runtime['runtime_task_call_name'] == task_name_input) & (
-                    df_input.metrics_runtime['runtime_shard'] == shard)]
-
-        cpu_time_mean = df_summary_shard.metrics_cpu_used_percent.apply(mean_of_string)
-
-        average_cpu_per_shard_dict[str(shard)] = cpu_time_mean.mean()
-        max_cpu_per_shard_dict[str(shard)] = cpu_time_mean.max()
-
-        max_memory_per_shard_dict[
-            str(shard)] = df_summary_shard.metrics_mem_used_gb.max()
-
-        max_disk_per_shard_dict[
-            str(shard)] = df_summary_shard.metrics_disk_used_gb.apply(
-            get_1st_disk_usage).max()
-
-        duration_per_shard_dict[str(shard)] = \
-            df_summary_shard['meta_duration_sec'].iloc[0]
-
-    # Removes nan values from dict
-    average_cpu_per_shard_clean_dict = remove_nan(average_cpu_per_shard_dict)
-    max_cpu_per_shard_clean_dict = remove_nan(max_cpu_per_shard_dict)
-    max_memory_per_shard_clean_dict = remove_nan(max_memory_per_shard_dict)
-    max_disk_per_shard_clean_dict = remove_nan(max_disk_per_shard_dict)
-    duration_per_shard_clean_dict = remove_nan(duration_per_shard_dict)
+    average_cpu_per_shard_clean_dict, max_cpu_per_shard_clean_dict, max_memory_per_shard_clean_dict, max_disk_per_shard_clean_dict, duration_per_shard_clean_dict = calculate_shard_metrics(
+        summary_shards=summary_shards,
+        metrics_runtime=metrics_runtime,
+        task_name_input=task_name_input,
+        mean_of_string=mean_of_string
+    )
 
     # Sort resource dict by value
     average_cpu_per_shard_sorted_dict = {k: v for k, v in sorted(
@@ -371,7 +343,7 @@ def plot_shard_summary(
                                       sorted(duration_per_shard_clean_dict.items(),
                                              reverse=True, key=lambda item: item[1])}
 
-    output_file("{}_{}_shard_summary.html".format(parent_workflow_id, task_name_input))
+    # Generate plots and outliersf
 
     p_cpu_a = generate_resource_plots_and_outliers(
         input_dataset=average_cpu_per_shard_sorted_dict,
@@ -505,51 +477,6 @@ def plot_shard_summary(
     )
 
     return fig
-
-
-def get_shard_summary(
-        df_monitoring: pd.DataFrame,
-        task_name: str,
-        parent_workflow_id: str,
-        max_shards: int,
-        plt_height: int = None,
-        plt_width: int = None,
-):
-    """
-    Creates a pdf file with resource usage plots for each task name
-    @param df_monitoring:
-    @param task_name:
-    @param parent_workflow_id:
-    @param max_shards:
-    @param plt_width:
-    @param plt_height:
-    @return:
-    """
-    # create and sort meta table by duration
-    df_monitoring_task = df_monitoring.metadata_runtime.loc[
-        df_monitoring.metadata_runtime['meta_task_call_name'] == task_name
-        ]
-
-    # removes duplicate shards
-    df_monitoring_task_uniqueShard = df_monitoring_task.drop_duplicates(
-        subset="meta_shard")
-    df_monitoring_task_sorted_duration = df_monitoring_task_uniqueShard.sort_values(
-        by='meta_duration_sec', ascending=False
-    )
-
-    # replace all shards in variable shards with the first 50 of the sorted duration table
-    shards = df_monitoring_task_sorted_duration.meta_shard.head(max_shards)
-
-    # Get shard summary
-    resource_plt = plot_shard_summary(
-        df_input=df_monitoring,
-        task_name_input=task_name,
-        parent_workflow_id=parent_workflow_id,
-        plt_height=plt_height,
-        plt_width=plt_width
-    )
-
-    return resource_plt
 
 
 def plot_detailed_resource_usage(
@@ -742,9 +669,9 @@ def plot_shards(
 
 
 def plot_resource_usage(
-    df_monitoring,
-    parent_workflow_id,
-    task_names,
+    df_monitoring: object,
+    parent_workflow_id: str,
+    task_names: list,
     plt_height: int = None,
     plt_width: int = None,
 ) -> go.Figure or plt:
@@ -759,9 +686,11 @@ def plot_resource_usage(
     :param plt_height:
     :param plt_width:
     """
+    # check if the task name is in the dataframe
+    if not all(elem in df_monitoring.metadata_runtime.runtime_task_call_name.unique() for elem in task_names):
+        logging.error(msg="Task name not found in dataframe")
 
     pdf_file_name = parent_workflow_id + '_resource_monitoring.pdf'
-
     for task_name in task_names:
         # Gets the all shards for a given task name
         shards = df_monitoring.metadata_runtime.runtime_shard.loc[
@@ -771,11 +700,10 @@ def plot_resource_usage(
         # If shard counts is greater than 10 then gets 10 longest running shards for a given task name
         max_shards = 2
         if len(shards) >= max_shards:
-            shard_sum_fig = get_shard_summary(
-                df_monitoring=df_monitoring,
-                task_name=task_name,
+            shard_sum_fig = plot_shard_summary(
+                metrics_runtime=df_monitoring.metrics_runtime,
+                task_name_input=task_name,
                 parent_workflow_id=parent_workflow_id,
-                max_shards=max_shards,
                 plt_height=plt_height,
                 plt_width=plt_width,
             )
@@ -825,3 +753,6 @@ def create_runtime_dict(
     }
 
     return runtime_dic
+
+
+
