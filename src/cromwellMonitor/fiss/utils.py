@@ -120,13 +120,23 @@ def process_fapi_response_df(
 
 
 def _convert_to_datetime(date_string):
+    """
+    Convert a date string to a datetime object
+    :param date_string: The date string
+    :return:
+    """
     date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
     return date_object
 
 
-def _days_from_today(date):
-    today = datetime.now()
-    difference = today - date
+def _days_from_today(target_date):
+    """
+    Get the number of days from today
+    :param target_date:  The target date
+    :return:
+    """
+    today = datetime.now().date()  # Get current date (without time)
+    difference = today - target_date.date()  # Strip time from input date
     return difference.days
 
 
