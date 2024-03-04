@@ -1,26 +1,18 @@
 import datetime
-import json
-from math import isnan
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.pyplot as plt
+import logging
+from typing import List, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from bokeh.io import output_file
-
+import plotly.graph_objects as go
 import plotly.io as pio
+import seaborn as sns
 from plotly.subplots import make_subplots
 
-import plotly.offline as pyo
-import plotly.graph_objects as go
-
-from .data_processing import mean_of_string, get_1st_disk_usage, \
-    get_outliers, fill_na_with_zero, calculate_shard_metrics
+from .data_processing import mean_of_string, get_outliers, fill_na_with_zero, \
+    calculate_shard_metrics
 from ..table import utils as tableUtils
-from ..logging import logging as log
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -673,62 +665,60 @@ def plot_shards(
 
 
 def plot_resource_usage(
-    df_monitoring: object,
+    df_monitoring: pd.DataFrame,
     parent_workflow_id: str,
-    task_names: list,
-    plt_height: int = None,
-    plt_width: int = None,
-) -> go.Figure or plt:
+    task_names: List[str],
+    plt_height: Optional[int] = None,
+    plt_width: Optional[int] = None,
+    target_shards: Optional[List[int]] = None,
+) -> Union[go.Figure, plt.Figure]:
     """
     Creates a pdf file with resource usage plots for each task name
-    @param df_monitoring:
-    @param parent_workflow_id:
-    @param task_names:
-    @return:
-    :param plt_width:
-    :param plt_height:
-    :param plt_height:
-    :param plt_width:
+    @param df_monitoring: The dataframe containing the monitoring metrics
+    @param parent_workflow_id: The parent workflow id
+    @param task_names: The task names
+    @param plt_height: The height of the plot
+    @param plt_width: The width of the plot
+    @param target_shards: Specific shards to plot for a sharded/scattered task
+    @return: A pdf file with resource usage plots for each task name
     """
-    # check if the task name is in the dataframe
-    if not all(elem in df_monitoring.metadata_runtime.runtime_task_call_name.unique() for elem in task_names):
-        logging.error(msg="Task name not found in dataframe")
-
-    pdf_file_name = parent_workflow_id + '_resource_monitoring.pdf'
     for task_name in task_names:
-        # Gets the all shards for a given task name
-        shards = df_monitoring.metadata_runtime.runtime_shard.loc[
-            (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name)]
-        shards = shards.sort_values().unique()
+        if task_name not in df_monitoring.metadata_runtime.runtime_task_call_name.unique():
+            raise ValueError(f"Task name {task_name} not found in dataframe")
 
-        # If shard counts is greater than 10 then gets 10 longest running shards for a given task name
-        max_shards = 2
-        if len(shards) >= max_shards:
-            shard_sum_fig = plot_shard_summary(
+        all_shards = df_monitoring.metadata_runtime.runtime_shard.loc[
+            (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name)].sort_values().unique()
+
+        if target_shards:
+            for target_shard in target_shards:
+                if target_shard not in all_shards:
+                    raise ValueError(f"Shard {target_shard} not found in dataframe")
+
+        task_shard_lookup: List[int] = target_shards if target_shards else all_shards
+
+        if len(task_shard_lookup) > 1:
+            return plot_shard_summary(
                 metrics_runtime=df_monitoring.metrics_runtime,
                 task_name_input=task_name,
                 parent_workflow_id=parent_workflow_id,
                 plt_height=plt_height,
                 plt_width=plt_width,
             )
-            pio.write_image(shard_sum_fig, pdf_file_name, format='pdf')
-            return shard_sum_fig
-
-        # Create detailed resource usage plots
-        if len(shards) < max_shards:
-            # with PdfPages(pdf_file_name) as pdf:
-            task_detailed_plts = plot_shards(
+        else:
+            return plot_shards(
                 df_monitoring=df_monitoring,
                 task_name=task_name,
-                shards=shards,
+                shards=task_shard_lookup,
                 plt_height=plt_height,
                 plt_width=plt_width
             )
-            task_detailed_plts.savefig(
-                pdf_file_name, bbox_inches='tight', pad_inches=0.5, format='pdf'
-            )
-            task_detailed_plts.show()
-            return task_detailed_plts
+
+
+def save_plot_as_pdf(plot: Union[go.Figure, plt.Figure], filename: str):
+    if isinstance(plot, go.Figure):
+        plot.write_image(filename, format='pdf')
+    else:
+        plot.savefig(filename, bbox_inches='tight', pad_inches=0.5, format='pdf')
 
 
 def create_runtime_dict(
