@@ -195,6 +195,7 @@ class Workflow:
         self.submission_id = submission_id
         self.parent_workflow_id = parent_workflow_id
         self.workflow_metadata: Dict[str, Any] = self._get_workflow_metadata()
+        self.workflow_name = self.get_workflow_name()
         self.subworkflow_ids = self._extract_subworkflow_ids(self.workflow_metadata)
         self.workflow_start_time = _convert_to_datetime(
             self.workflow_metadata['start']
@@ -207,6 +208,9 @@ class Workflow:
 
     def get_workflow_metadata(self):
         return self.workflow_metadata
+
+    def get_workflow_name(self):
+        return self.workflow_metadata.get('workflowName')
 
     def get_subworkflow_ids(self):
         return self.subworkflow_ids
