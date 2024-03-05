@@ -670,7 +670,7 @@ def plot_resource_usage(
     task_names: List[str],
     plt_height: Optional[int] = None,
     plt_width: Optional[int] = None,
-    target_shards: Optional[List[int]] = None,
+    target_shard: Optional[int] = None,
 ) -> Union[go.Figure, plt.Figure]:
     """
     Creates a pdf file with resource usage plots for each task name
@@ -689,12 +689,11 @@ def plot_resource_usage(
         all_shards = df_monitoring.metadata_runtime.runtime_shard.loc[
             (df_monitoring.metadata_runtime['runtime_task_call_name'] == task_name)].sort_values().unique()
 
-        if target_shards:
-            for target_shard in target_shards:
-                if target_shard not in all_shards:
-                    raise ValueError(f"Shard {target_shard} not found in dataframe")
+        if target_shard:
+            if target_shard not in all_shards:
+                raise ValueError(f"Shard {target_shard} not found in dataframe")
 
-        task_shard_lookup: List[int] = target_shards if target_shards else all_shards
+        task_shard_lookup: List[int] = [target_shard] if target_shard else all_shards
 
         if len(task_shard_lookup) > 1:
             return plot_shard_summary(
