@@ -679,7 +679,7 @@ def plot_resource_usage(
     @param task_names: The task names
     @param plt_height: The height of the plot
     @param plt_width: The width of the plot
-    @param target_shards: Specific shards to plot for a sharded/scattered task
+    @param target_shard: Specific shards to plot for a sharded/scattered task
     @return: A pdf file with resource usage plots for each task name
     """
     for task_name in task_names:
