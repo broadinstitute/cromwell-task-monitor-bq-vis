@@ -693,7 +693,7 @@ def plot_resource_usage(
             if target_shard not in all_shards:
                 raise ValueError(f"Shard {target_shard} not found in dataframe")
 
-        task_shard_lookup: List[int] = [target_shard] if target_shard else all_shards
+        task_shard_lookup: List[int] = [target_shard] if target_shard is not None else all_shards
 
         if len(task_shard_lookup) > 1:
             return plot_shard_summary(
