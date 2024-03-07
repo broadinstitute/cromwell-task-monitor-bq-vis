@@ -1,59 +1,59 @@
+import concurrent.futures
+import datetime
 import logging
 import sys
-import datetime
 
 import google.auth
-from google.cloud import bigquery
-from google.api_core.exceptions import NotFound
-
-import concurrent.futures
-from ..logging import logging as log
 import pandas as pd
+from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
+
+from ..logging import logging as log
 
 METADATA_COLUMNS = [
-    'meta_attempt',
-    'meta_cpu',
-    'meta_disk_mounts',
-    'meta_disk_total_gb',
-    'meta_disk_types',
-    'meta_docker_image',
-    'meta_end_time',
-    'meta_execution_status',
-    'meta_inputs',
-    'meta_instance_name',
-    'meta_mem_total_gb',
-    'meta_preemptible',
-    'meta_project_id',
-    'meta_shard',
-    'meta_start_time',
-    'meta_task_call_name',
-    'meta_workflow_id',
-    'meta_workflow_name',
-    'meta_zone',
-    'meta_duration_sec'
+    "meta_attempt",
+    "meta_cpu",
+    "meta_disk_mounts",
+    "meta_disk_total_gb",
+    "meta_disk_types",
+    "meta_docker_image",
+    "meta_end_time",
+    "meta_execution_status",
+    "meta_inputs",
+    "meta_instance_name",
+    "meta_mem_total_gb",
+    "meta_preemptible",
+    "meta_project_id",
+    "meta_shard",
+    "meta_start_time",
+    "meta_task_call_name",
+    "meta_workflow_id",
+    "meta_workflow_name",
+    "meta_zone",
+    "meta_duration_sec",
 ]
 
 METADATA_COLUMNS_TYPES = {
-    'meta_attempt': 'Int64',
-    'meta_cpu': 'Int64',
-    'meta_disk_mounts': 'object',
-    'meta_disk_total_gb': 'object',
-    'meta_disk_types': 'object',
-    'meta_docker_image': 'object',
-    'meta_end_time': 'datetime64[us, UTC]',
-    'meta_execution_status': 'object',
-    'meta_inputs': 'object',
-    'meta_instance_name': 'object',
-    'meta_mem_total_gb': 'float64',
-    'meta_preemptible': 'boolean',
-    'meta_project_id': 'object',
-    'meta_shard': 'Int64',
-    'meta_start_time': 'datetime64[us, UTC]',
-    'meta_task_call_name': 'object',
-    'meta_workflow_id': 'object',
-    'meta_workflow_name': 'object',
-    'meta_zone': 'object',
-    'meta_duration_sec': 'Int64'
+    "meta_attempt": "Int64",
+    "meta_cpu": "Int64",
+    "meta_disk_mounts": "object",
+    "meta_disk_total_gb": "object",
+    "meta_disk_types": "object",
+    "meta_docker_image": "object",
+    "meta_end_time": "datetime64[us, UTC]",
+    "meta_execution_status": "object",
+    "meta_inputs": "object",
+    "meta_instance_name": "object",
+    "meta_mem_total_gb": "float64",
+    "meta_preemptible": "boolean",
+    "meta_project_id": "object",
+    "meta_shard": "Int64",
+    "meta_start_time": "datetime64[us, UTC]",
+    "meta_task_call_name": "object",
+    "meta_workflow_id": "object",
+    "meta_workflow_name": "object",
+    "meta_zone": "object",
+    "meta_duration_sec": "Int64",
 }
 
 
@@ -66,8 +66,14 @@ class QueryBQToMonitor:
     BQ tables and produces a pandas datafram.
     """
 
-    def __init__(self, workflow_ids, days_back_upper_bound, days_back_lower_bound,
-                 bq_goolge_project, debug=False):
+    def __init__(
+        self,
+        workflow_ids,
+        days_back_upper_bound,
+        days_back_lower_bound,
+        bq_goolge_project,
+        debug=False,
+    ):
 
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
@@ -78,8 +84,9 @@ class QueryBQToMonitor:
         h.flush = sys.stderr.flush
         self.logger.addHandler(h)
 
-        self.formated_workflow_ids = '\"' + '","'.join(
-            workflow_ids) + '\"'  # format workflow ids for query
+        self.formated_workflow_ids = (
+            '"' + '","'.join(workflow_ids) + '"'
+        )  # format workflow ids for query
 
         self.days_back_upper_bound = days_back_upper_bound
         self.days_back_lower_bound = days_back_lower_bound
@@ -109,16 +116,21 @@ class QueryBQToMonitor:
         meta_nrow, meta_ncol = self.metadata.shape
 
         # basic QC
-        if (meta_nrow != runtime_nrow):
+        if meta_nrow != runtime_nrow:
             self.logger.warning(
-                'Metadata and runtime number of rows are different. You might want to check.')
+                "Metadata and runtime number of rows are different. You might want to check."
+            )
         summary_msg = f"Nrows of runtime: {runtime_nrow}, Ncols of runtime: {runtime_ncol}, \nNrows of meta: {meta_nrow}, Ncols of meta: {meta_ncol}"
         self.logger.info(summary_msg)
 
         # merge the two
-        self.metadata_runtime = pd.merge(self.metadata, self.runtime,
-                                         left_on='meta_instance_name',
-                                         right_on='runtime_instance_name', how='right')
+        self.metadata_runtime = pd.merge(
+            self.metadata,
+            self.runtime,
+            left_on="meta_instance_name",
+            right_on="runtime_instance_name",
+            how="right",
+        )
         print()
         self.metadata_runtime.runtime_task_call_name.describe()
 
@@ -146,7 +158,7 @@ class QueryBQToMonitor:
           TIMESTAMP_DIFF(metrics.max_timestamp, metrics.min_timestamp, SECOND) AS metrics_duration_sec
 
         FROM
-          `{self.bq_goolge_project}.cromwell_monitoring.runtime`  runtime 
+          `{self.bq_goolge_project}.cromwell_monitoring.runtime` runtime
         LEFT JOIN (
             SELECT
                 metrics.instance_id,
@@ -166,7 +178,7 @@ class QueryBQToMonitor:
               DATE(runtime.start_time) >= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_upper_bound} DAY)
           AND DATE(runtime.start_time) <= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_lower_bound} DAY)
 
-          AND runtime.workflow_id IN ({self.formated_workflow_ids})    
+          AND runtime.workflow_id IN ({self.formated_workflow_ids})
         """
         self.logger.debug(f"Runtime SQL: {runtime_sql}")
         self.runtime = self.bq_client.query(query=runtime_sql).to_dataframe()
@@ -205,7 +217,7 @@ class QueryBQToMonitor:
               DATE(metadata.start_time) >= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_upper_bound} DAY)
           AND DATE(metadata.start_time) <= DATE_SUB(CURRENT_DATE(), INTERVAL {self.days_back_lower_bound} DAY)
 
-          AND metadata.workflow_id IN ({self.formated_workflow_ids})    
+          AND metadata.workflow_id IN ({self.formated_workflow_ids})
         """
         try:
             logging.debug(f"Metadata SQL: {metadata_sql}")
@@ -216,14 +228,13 @@ class QueryBQToMonitor:
             # Todo: add a fiss function that attempts to fetch the metadata table again
             log.handle_bq_warning(
                 err=e,
-                message="Error fetching metadata table, replacing with empty dataframe."
+                message="Error fetching metadata table, replacing with empty dataframe.",
             )
             # create empty metadata dataframe
             self.metadata = pd.DataFrame({column: [] for column in METADATA_COLUMNS})
             self.metadata = self.metadata.astype(METADATA_COLUMNS_TYPES)
 
         self.logger.debug(f"Metadata table shape: {self.metadata.shape}")
-
 
     def _get_metrics(self):
 
@@ -238,17 +249,20 @@ class QueryBQToMonitor:
 
         # Split instance IDs into pools for concurrent processing
         ids_pool = {
-            i: instance_ids[i * batch_size: (
-                                                        i + 1) * batch_size] if i < num_threads else instance_ids[
-                                                                                                     i * batch_size:]
+            i: (
+                instance_ids[i * batch_size : (i + 1) * batch_size]
+                if i < num_threads
+                else instance_ids[i * batch_size :]
+            )
             for i in range(num_threads + 1)
         }
 
         # Submit jobs to ThreadPoolExecutor for fetching metrics
         with concurrent.futures.ThreadPoolExecutor() as executor:
             jobs_pool = {
-                i: executor.submit(self._fetch_metrics_on_vms_batch, ids_pool[i]) for i
-                in range(num_threads + 1)}
+                i: executor.submit(self._fetch_metrics_on_vms_batch, ids_pool[i])
+                for i in range(num_threads + 1)
+            }
 
         # Collect results from jobs
         results_pool = {i: jobs_pool[i].result() for i in range(num_threads + 1)}
@@ -259,34 +273,38 @@ class QueryBQToMonitor:
         s = pf.seconds
         hours, remainder = divmod(s, 3600)
         minutes, seconds = divmod(remainder, 60)
-        elapse = '{:02}:{:02}:{:02}'.format(int(hours), int(minutes), int(seconds))
+        elapse = "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
         self.logger.info(f"Finished on {finish_time}.")
         self.logger.info(f"Totalling {elapse}.")
 
-        l = list(results_pool.values())
-        self.metrics = pd.concat(l)
+        self.metrics = pd.concat(list(results_pool.values()))
 
         # QC
         # Error if metrics is empty
-        if (self.metrics.empty):
-            self.logger.error("Error: Metrics table is empty. Please verify workflow "
-                              "id or timeframe.")
+        if self.metrics.empty:
+            self.logger.error(
+                "Error: Metrics table is empty. Please verify workflow "
+                "id or timeframe."
+            )
             return
         # Warning if there are missing metrics
         retries = 0
         d = set(self.metadata_runtime.runtime_instance_id.unique()) - set(
-            self.metrics.metrics_instance_id.unique())
-        while ((not d) and 10 > retries):
+            self.metrics.metrics_instance_id.unique()
+        )
+        while (not d) and 10 > retries:
             self.logger.info(f"Retrieving metrics info on leftovers: {d}")
             left_over = self._fetch_metrics_on_vms_batch(d)
-            if (not left_over.empty):
+            if not left_over.empty:
                 self.metrics = pd.concat([self.metrics, left_over], axis=0)
             d = set(self.metadata_runtime.runtime_instance_id.unique()) - set(
-                self.metrics.metrics_instance_id.unique())
+                self.metrics.metrics_instance_id.unique()
+            )
             retries += 1
-        if (0 != d):
+        if 0 != d:
             self.logger.warning(
-                f"Not all VMs provisioned have their metrics sent over ({d} didn't).")
+                f"Not all VMs provisioned have their metrics sent over ({d} didn't)."
+            )
 
     def _fetch_metrics_on_vms_batch(self, vm_instance_ids):
         """
@@ -295,10 +313,10 @@ class QueryBQToMonitor:
         @return:
         """
         # if vm_instance_ids is empty, return empty dataframe
-        if (0 == len(vm_instance_ids)):
+        if 0 == len(vm_instance_ids):
             return pd.DataFrame()
 
-        ids_string = ', '.join(map(str, vm_instance_ids))
+        ids_string = ", ".join(map(str, vm_instance_ids))
         metrics_sql = f"""
 
         SELECT

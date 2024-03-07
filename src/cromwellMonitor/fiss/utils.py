@@ -1,19 +1,23 @@
+from datetime import datetime
+from typing import Any, Dict, List
+
 import firecloud.api as fapi
 import pandas as pd
-from typing import List, Dict, Any
-from datetime import datetime
+
 from ..logging import logging as log
 
 SUBMISSION_COLUMNS = [
-    'submitter', 'status', 'submissionId', 'submissionDate', 'workflowStatuses'
+    "submitter",
+    "status",
+    "submissionId",
+    "submissionDate",
+    "workflowStatuses",
 ]
-WORKFLOW_COLUMNS = ['workflowId', 'status', 'statusLastChangedDate', 'messages']
+WORKFLOW_COLUMNS = ["workflowId", "status", "statusLastChangedDate", "messages"]
 
 
 def get_list_of_submissions(
-        workspace_namespace: str,
-        workspace_name: str,
-        submission_columns: list = None
+    workspace_namespace: str, workspace_name: str, submission_columns: list = None
 ) -> pd.DataFrame:
     """
     Get a list of submissions for a workspace
@@ -35,10 +39,9 @@ def get_list_of_submissions(
 
         submissions_df_sorted = process_fapi_response_df(
             df=submissions_df,
-            date_columns=['submissionDate'],
+            date_columns=["submissionDate"],
             columns=submission_columns,
-            sort_by='submissionDate'
-
+            sort_by="submissionDate",
         )
 
         return submissions_df_sorted
@@ -46,15 +49,15 @@ def get_list_of_submissions(
     except Exception as e:
         log.handle_firecloud_server_error(
             err=e,
-            message=f"Error getting list of submissions for workspace {workspace_name}"
+            message=f"Error getting list of submissions for workspace {workspace_name}",
         )
 
 
 def get_submission_workflow_ids(
-        workspace_namespace: str,
-        workspace_name: str,
-        submission_id: str,
-        workflow_columns=None
+    workspace_namespace: str,
+    workspace_name: str,
+    submission_id: str,
+    workflow_columns=None,
 ) -> pd.DataFrame:
     """
     Get a list of workflow ids for a submission
@@ -72,31 +75,30 @@ def get_submission_workflow_ids(
         response_get_submission = fapi.get_submission(
             workspace=workspace_name,
             namespace=workspace_namespace,
-            submission_id=submission_id
+            submission_id=submission_id,
         )
 
         print("Status code:", response_get_submission.status_code)
         response_get_submission_json = response_get_submission.json()
-        workflow_id_df = pd.DataFrame(response_get_submission_json['workflows'])
+        workflow_id_df = pd.DataFrame(response_get_submission_json["workflows"])
 
         workflow_id_df_sorted = process_fapi_response_df(
             df=workflow_id_df,
-            date_columns=['statusLastChangedDate'],
+            date_columns=["statusLastChangedDate"],
             columns=workflow_columns,
-            sort_by='statusLastChangedDate'
+            sort_by="statusLastChangedDate",
         )
 
         return workflow_id_df_sorted
 
     except Exception as e:
         log.handle_firecloud_server_error(
-            err=e,
-            message=f"Error getting workflow ids for submissions {submission_id}"
+            err=e, message=f"Error getting workflow ids for submissions {submission_id}"
         )
 
 
 def process_fapi_response_df(
-        df: pd.DataFrame, date_columns: list, columns: list, sort_by: str
+    df: pd.DataFrame, date_columns: list, columns: list, sort_by: str
 ) -> pd.DataFrame:
     """
     Process the content of a response to a FireCloud API request
@@ -125,7 +127,7 @@ def _convert_to_datetime(date_string):
     :param date_string: The date string
     :return:
     """
-    date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
+    date_object = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
     return date_object
 
 
@@ -141,11 +143,11 @@ def _days_from_today(target_date):
 
 
 def get_workflow_metadata_api_call(
-        namespace,
-        workspace,
-        submission_id,
-        workflow_id,
-        expand_sub_sorkflows=False,
+    namespace,
+    workspace,
+    submission_id,
+    workflow_id,
+    expand_sub_sorkflows=False,
 ):
     """Request the metadata for a workflow in a submission.
     Modified version of the FireCloud API call to get workflow metadata
@@ -161,10 +163,9 @@ def get_workflow_metadata_api_call(
         https://api.firecloud.org/#!/Submissions/workflowMetadata
     """
 
-    uri = "workspaces/{0}/{1}/submissions/{2}/workflows/{3}".format(namespace,
-                                                                       workspace,
-                                                                       submission_id,
-                                                                       workflow_id)
+    uri = "workspaces/{0}/{1}/submissions/{2}/workflows/{3}".format(
+        namespace, workspace, submission_id, workflow_id
+    )
     if expand_sub_sorkflows:
         uri += "?expandSubWorkflows=true"
 
@@ -177,11 +178,11 @@ class Workflow:
     """
 
     def __init__(
-            self,
-            workspace_namespace: str,
-            workspace_name: str,
-            submission_id: str,
-            parent_workflow_id: str
+        self,
+        workspace_namespace: str,
+        workspace_name: str,
+        submission_id: str,
+        parent_workflow_id: str,
     ):
         """
         Initialize the workflow
@@ -197,12 +198,8 @@ class Workflow:
         self.workflow_metadata: Dict[str, Any] = self._get_workflow_metadata()
         self.workflow_name = self.get_workflow_name()
         self.subworkflow_ids = self._extract_subworkflow_ids(self.workflow_metadata)
-        self.workflow_start_time = _convert_to_datetime(
-            self.workflow_metadata['start']
-        )
-        self.workflow_end_time = _convert_to_datetime(
-            self.workflow_metadata['end']
-        )
+        self.workflow_start_time = _convert_to_datetime(self.workflow_metadata["start"])
+        self.workflow_end_time = _convert_to_datetime(self.workflow_metadata["end"])
         self.workfow_start_from_today = _days_from_today(self.workflow_start_time)
         self.workfow_end_from_today = _days_from_today(self.workflow_end_time)
 
@@ -210,7 +207,7 @@ class Workflow:
         return self.workflow_metadata
 
     def get_workflow_name(self):
-        return self.workflow_metadata.get('workflowName')
+        return self.workflow_metadata.get("workflowName")
 
     def get_subworkflow_ids(self):
         return self.subworkflow_ids
@@ -237,7 +234,7 @@ class Workflow:
         return response_workflow_metadata_json
 
     def _extract_subworkflow_ids(
-            self, workflow_metadata_dict: Dict[str, Any]
+        self, workflow_metadata_dict: Dict[str, Any]
     ) -> List[str]:
         """Get associated subworkflow ids from workflow metadata
         @param workflow_metadata_dict: the workflow metadata dictionary
@@ -247,18 +244,18 @@ class Workflow:
             return []
 
         ids = [
-            sub_workflow_metadata['id']
-            for call_name, shards in workflow_metadata_dict.get('calls', {}).items()
+            sub_workflow_metadata["id"]
+            for call_name, shards in workflow_metadata_dict.get("calls", {}).items()
             for shard in shards
-            if (sub_workflow_metadata := shard.get('subWorkflowMetadata', {})).get('id')
+            if (sub_workflow_metadata := shard.get("subWorkflowMetadata", {})).get("id")
         ]
 
         ids.extend(
             id
-            for call_name, shards in workflow_metadata_dict.get('calls', {}).items()
+            for call_name, shards in workflow_metadata_dict.get("calls", {}).items()
             for shard in shards
             for id in self._extract_subworkflow_ids(
-                shard.get('subWorkflowMetadata', {})
+                shard.get("subWorkflowMetadata", {})
             )
         )
 

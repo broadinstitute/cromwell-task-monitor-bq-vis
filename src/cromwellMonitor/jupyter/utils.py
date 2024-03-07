@@ -1,4 +1,5 @@
 import ipywidgets as widgets
+from IPython import display
 
 
 def create_task_selector(options: list) -> widgets.SelectMultiple:
@@ -69,7 +70,7 @@ def create_box_selector(
         options=options,
         description=option_description,
         ensure_option=True,
-        disabled=False
+        disabled=False,
     )
 
     return selected_submission_id
