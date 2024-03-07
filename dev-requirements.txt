@@ -1,0 +1,13 @@
+isort==5.13.2
+tox
+wheel
+bumpversion
+twine
+black
+flake8
+pylint
+tomli==2.0.1
+cython
+sphinx
+sphinx-rtd-theme
+mypy==1.8.0
