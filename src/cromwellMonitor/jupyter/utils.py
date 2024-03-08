@@ -3,7 +3,7 @@ This module contains utility functions for creating widgets
 """
 
 import ipywidgets as widgets
-from IPython import display
+from IPython.display import display
 
 
 def create_task_selector(options: list) -> widgets.SelectMultiple:
