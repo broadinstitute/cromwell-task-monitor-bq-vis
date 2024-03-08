@@ -25,7 +25,7 @@ def load_dataframe(filename) -> pd.DataFrame or None:
         return None
 
 
-def get_info_per_task(task_name, df):
+def get_info_per_task(task_name, df) -> (int, int):
     """
     Get the duration and shard count for a given task
     @param task_name:
@@ -43,12 +43,12 @@ def get_info_per_task(task_name, df):
     return task_duration, shard_count
 
 
-def get_task_summary(task_names: list, df: pd.DataFrame):
+def get_task_summary(task_names: list, df: pd.DataFrame) -> dict:
     """
     Get the duration and shard count for a given task
-    @param tasks:
-    @param df:
-    @return:
+    :param df:
+    :param task_names:
+    :return:
     """
     task_summary_dict = {}
     for task in task_names:
@@ -56,12 +56,11 @@ def get_task_summary(task_names: list, df: pd.DataFrame):
     return task_summary_dict
 
 
-def get_task_summary_duration(task_summary_dict: dict):
+def get_task_summary_duration(task_summary_dict: dict) -> dict:
     """
     Get the duration and shard count for a given task
-    @param tasks:
-    @param df:
-    @return:
+    :param task_summary_dict:
+    :return:
     """
     task_summary_duration = {}
     for task in task_summary_dict:

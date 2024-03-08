@@ -40,7 +40,7 @@ def calculate_workflow_duration(df_monitoring) -> int:
     return workflow_duration
 
 
-def get_task_summary(df_monitoring):
+def get_task_summary(df_monitoring) -> (pd.DataFrame, dict):
     """
     Get the task name and duration summary for a given workflow monitoring dataframe
     :param df_monitoring: The dataframe containing the monitoring metrics.
