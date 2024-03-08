@@ -1,3 +1,7 @@
+"""
+This file contains utility functions for the data analysis
+"""
+
 import datetime
 from os import path
 
@@ -12,38 +16,43 @@ def load_dataframe(filename) -> pd.DataFrame or None:
     """
     if path.exists(filename):
         df = pd.read_pickle(filename)
-        print(f'Successfully loaded data from {filename}. '
-              f'The dataframe has {df.shape[0]} rows and {df.shape[1]} columns.')
+        print(
+            f"Successfully loaded data from {filename}. "
+            f"The dataframe has {df.shape[0]} rows and {df.shape[1]} columns."
+        )
         return df
-    else:
-        print(f'No data found. The file {filename} '
-              f'does not exist in the current directory.')
-        return None
+
+    print(
+        f"No data found. The file {filename} "
+        f"does not exist in the current directory."
+    )
+    return None
 
 
-def get_info_per_task(task_name, df):
+def get_info_per_task(task_name, df) -> (int, int):
     """
     Get the duration and shard count for a given task
     @param task_name:
     @param df:
     @return:
     """
-    df_task = df.loc[(df['runtime_task_call_name'] == task_name)]
-    latest_end_datetime = max(df_task['metrics_timestamp'])
-    earliest_start_datetime = min(df_task['metrics_timestamp'])
+    df_task = df.loc[(df["runtime_task_call_name"] == task_name)]
+    latest_end_datetime = max(df_task["metrics_timestamp"])
+    earliest_start_datetime = min(df_task["metrics_timestamp"])
     task_duration = round(
-        datetime.timedelta.total_seconds(latest_end_datetime - earliest_start_datetime))
+        datetime.timedelta.total_seconds(latest_end_datetime - earliest_start_datetime)
+    )
 
     shard_count = len(df_task.runtime_shard.unique())
     return task_duration, shard_count
 
 
-def get_task_summary(task_names: list, df: pd.DataFrame):
+def get_task_summary(task_names: list, df: pd.DataFrame) -> dict:
     """
     Get the duration and shard count for a given task
-    @param tasks:
-    @param df:
-    @return:
+    :param df:
+    :param task_names:
+    :return:
     """
     task_summary_dict = {}
     for task in task_names:
@@ -51,12 +60,11 @@ def get_task_summary(task_names: list, df: pd.DataFrame):
     return task_summary_dict
 
 
-def get_task_summary_duration(task_summary_dict: dict):
+def get_task_summary_duration(task_summary_dict: dict) -> dict:
     """
     Get the duration and shard count for a given task
-    @param tasks:
-    @param df:
-    @return:
+    :param task_summary_dict:
+    :return:
     """
     task_summary_duration = {}
     for task in task_summary_dict:
@@ -75,17 +83,15 @@ def create_metrics_runtime_table(metrics: pd.DataFrame, metadata_runtime: pd.Dat
         metrics,
         metadata_runtime[
             [
-                'runtime_workflow_id',
-                'runtime_task_call_name',
-                'runtime_shard',
-                'runtime_instance_id',
-                'metrics_duration_sec',
-                'meta_duration_sec'
+                "runtime_workflow_id",
+                "runtime_task_call_name",
+                "runtime_shard",
+                "runtime_instance_id",
+                "metrics_duration_sec",
+                "meta_duration_sec",
             ]
         ],
-        left_on='metrics_instance_id',
-        right_on='runtime_instance_id'
+        left_on="metrics_instance_id",
+        right_on="runtime_instance_id",
     )
     return metrics_runtime
-
-
