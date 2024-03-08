@@ -1,6 +1,6 @@
 import ipywidgets as widgets
 
-from cromwellMonitor.jupyter import utils
+from cromonitor.jupyter import utils
 
 
 class TestJupyterUtils:

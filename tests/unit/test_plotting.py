@@ -1,6 +1,6 @@
 import pandas as pd
 
-from cromwellMonitor.plotting import plotting
+from cromonitor.plotting import plotting
 
 
 class TestPlotting:
