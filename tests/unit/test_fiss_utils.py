@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from cromwellMonitor.fiss import utils
+from cromonitor.fiss import utils
 
 
 class TestFissUtils:

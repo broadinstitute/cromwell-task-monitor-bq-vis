@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from cromwellMonitor.table import utils
+from cromonitor.table import utils
 
 
 class TestTablesUtils:
