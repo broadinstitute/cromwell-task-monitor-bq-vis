@@ -1,3 +1,6 @@
+"""
+This module contains utility functions for interacting with the FireCloud API
+"""
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -51,6 +54,7 @@ def get_list_of_submissions(
             err=e,
             message=f"Error getting list of submissions for workspace {workspace_name}",
         )
+        return pd.DataFrame()  # Return an empty DataFrame in case of an exception
 
 
 def get_submission_workflow_ids(
@@ -95,6 +99,7 @@ def get_submission_workflow_ids(
         log.handle_firecloud_server_error(
             err=e, message=f"Error getting workflow ids for submissions {submission_id}"
         )
+        return pd.DataFrame()  # Return an empty DataFrame in case of an exception
 
 
 def process_fapi_response_df(
@@ -163,12 +168,11 @@ def get_workflow_metadata_api_call(
         https://api.firecloud.org/#!/Submissions/workflowMetadata
     """
 
-    uri = "workspaces/{0}/{1}/submissions/{2}/workflows/{3}".format(
-        namespace, workspace, submission_id, workflow_id
-    )
+    uri = f"workspaces/{namespace}/{workspace}/submissions/{submission_id}/workflows/{workflow_id}"
     if expand_sub_sorkflows:
         uri += "?expandSubWorkflows=true"
-
+    # TODO: Access to a protected resource is discouraged, this function is
+    #  temporarily used until fiss is updated to include the expandSubWorkflows
     return fapi.__get(uri)
 
 
@@ -204,12 +208,24 @@ class Workflow:
         self.workfow_end_from_today = _days_from_today(self.workflow_end_time)
 
     def get_workflow_metadata(self):
+        """
+        Get the workflow metadata
+        :return:
+        """
         return self.workflow_metadata
 
     def get_workflow_name(self):
+        """
+        Get the workflow name
+        :return:
+        """
         return self.workflow_metadata.get("workflowName")
 
     def get_subworkflow_ids(self):
+        """
+        Get the subworkflow ids
+        :return:
+        """
         return self.subworkflow_ids
 
     def _get_workflow_metadata(self) -> dict:
