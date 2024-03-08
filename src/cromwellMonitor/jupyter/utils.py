@@ -1,3 +1,7 @@
+"""
+This module contains utility functions for creating widgets
+"""
+
 import ipywidgets as widgets
 from IPython import display
 
@@ -37,6 +41,11 @@ def create_submission_selector(options: list) -> widgets.Combobox:
 
 
 def create_workflow_selector(options: list) -> widgets.Combobox:
+    """
+    Create a workflow selector widget
+    :param options:
+    :return:
+    """
     # Create the SelectMultiple widget
     workflow_selector = create_box_selector(
         options=options, option_description="Workflow ID"
