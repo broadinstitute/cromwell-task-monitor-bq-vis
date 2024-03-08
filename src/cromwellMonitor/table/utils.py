@@ -1,3 +1,7 @@
+"""
+This file contains utility functions for the data analysis
+"""
+
 import datetime
 from os import path
 
@@ -17,12 +21,12 @@ def load_dataframe(filename) -> pd.DataFrame or None:
             f"The dataframe has {df.shape[0]} rows and {df.shape[1]} columns."
         )
         return df
-    else:
-        print(
-            f"No data found. The file {filename} "
-            f"does not exist in the current directory."
-        )
-        return None
+
+    print(
+        f"No data found. The file {filename} "
+        f"does not exist in the current directory."
+    )
+    return None
 
 
 def get_info_per_task(task_name, df) -> (int, int):
