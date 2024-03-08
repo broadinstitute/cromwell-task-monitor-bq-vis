@@ -497,6 +497,70 @@ def plot_shard_summary(
     return fig
 
 
+def subplot_resource_usage(
+    subplot,
+    df_monitoring_task_shard: pd.DataFrame,
+    resource_used_array: list,
+    runtime_dic: dict,
+    task_shard_duration: int,
+    resource_label: str,
+    obtained_resource_key: Optional[str] = None,
+    requested_resource_key: Optional[str] = None,
+    available_resource: Optional[float] = None,
+):
+    """
+    Plots the usage of a specific resource on a given subplot.
+
+    This function plots the usage of a resource such as CPU, memory, or disk space over time.
+    It also plots lines indicating the obtained and requested amounts of the resource, if provided.
+
+    @param subplot: The plot to draw on.
+    @param df_monitoring_task_shard: The dataframe containing the monitoring metrics.
+    @param resource_used_array: The array of resource usage percentages.
+    @param runtime_dic: The dictionary of runtime attributes.
+    @param task_shard_duration: The duration of the task shard.
+    @param resource_label: The label of the resource.
+    @param obtained_resource_key: The key to get the obtained resource from the runtime dictionary.
+    @param requested_resource_key: The key to get the requested resource from the runtime dictionary.
+    """
+    subplot.plot(
+        df_monitoring_task_shard.metrics_timestamp.astype("O"),
+        resource_used_array,
+        label=f"{resource_label} Used",
+    )
+    if available_resource:
+        subplot.axhline(
+            y=available_resource,
+            color="r",
+            label=f"Max {resource_label}: %.2f" % available_resource,
+        )
+    if obtained_resource_key:
+        subplot.plot(
+            [],
+            [],
+            " ",
+            label=f"Obtained {resource_label}: {runtime_dic[obtained_resource_key]}",
+        )
+    if requested_resource_key:
+        subplot.plot(
+            [],
+            [],
+            " ",
+            label=f"Requested {resource_label}: {runtime_dic[requested_resource_key]}",
+        )
+    subplot.legend(loc="upper center", bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
+    subplot.set_ylabel(f"{resource_label} Percentage Used")
+    subplot.set_xlabel("Date Time")
+    subplot.set_xlim(
+        df_monitoring_task_shard.metrics_timestamp.min(),
+        df_monitoring_task_shard.metrics_timestamp.max(),
+    )  # Set x-axis limits
+    subplt2 = subplot.twiny()
+    subplt2.set_xlim(0, task_shard_duration)
+    subplt2.set_xlabel("Duration Time")
+    subplot.grid(True)
+
+
 def plot_detailed_resource_usage(
     task_name: str,
     shard_number: int,
@@ -540,138 +604,62 @@ def plot_detailed_resource_usage(
         + str(task_shard_duration),
         fontsize=20,
     )
-    cpu_plt.plot(
-        df_monitoring_task_shard.metrics_timestamp.astype("O"),
-        cpu_used_percent_array,
-        label="CPU Used",
+    subplot_resource_usage(
+        subplot=cpu_plt,
+        df_monitoring_task_shard=df_monitoring_task_shard,
+        resource_used_array=cpu_used_percent_array,
+        runtime_dic=runtime_dic,
+        task_shard_duration=task_shard_duration,
+        resource_label="CPU",
+        obtained_resource_key="available_cpu_cores",
+        requested_resource_key="requested_cpu_cores"
     )
-    cpu_plt.plot(
-        [],
-        [],
-        " ",
-        label="Obtained CPU Cores: {}".format(runtime_dic["available_cpu_cores"]),
-    )
-    cpu_plt.plot(
-        [],
-        [],
-        " ",
-        label="Requested CPU Cores: {}".format(runtime_dic["requested_cpu_cores"]),
-    )
-    cpu_plt.legend(loc="upper center", bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
-    cpu_plt.set_ylabel("CPU Percentage Used")
-    cpu_plt.set_xlabel("Date Time")
-    cpu_plt.set_xlim(
-        df_monitoring_task_shard.metrics_timestamp.min(),
-        df_monitoring_task_shard.metrics_timestamp.max(),
-    )  # Set x-axis limits
-    cpu_plt2 = cpu_plt.twiny()
-    cpu_plt2.set_xlim(0, task_shard_duration)
-    cpu_plt2.set_xlabel("Duration Time")
-    cpu_plt.grid(True)
 
     mem_plt = axs[1]
-    mem_plt.plot(
-        df_monitoring_task_shard.metrics_timestamp.astype("O"),
-        df_monitoring_task_shard.metrics_mem_used_gb,
-        label="Memory Used",
+    subplot_resource_usage(
+        subplot=mem_plt,
+        df_monitoring_task_shard=df_monitoring_task_shard,
+        resource_used_array=df_monitoring_task_shard.metrics_mem_used_gb,
+        runtime_dic=runtime_dic,
+        task_shard_duration=task_shard_duration,
+        resource_label="Memory GB",
+        obtained_resource_key="available_mem_gb",
+        requested_resource_key="requested_mem_gb",
+        available_resource=runtime_dic["available_mem_gb"],
     )
-    mem_plt.axhline(
-        y=runtime_dic["available_mem_gb"],
-        color="r",
-        label="Max Memory GB: %.2f" % (runtime_dic["available_mem_gb"]),
-    )
-    mem_plt.plot(
-        [],
-        [],
-        " ",
-        label="Obtained Memory GB: {}".format(runtime_dic["available_mem_gb"]),
-    )
-    mem_plt.plot(
-        [],
-        [],
-        " ",
-        label="Requested Memory GB: {}".format(runtime_dic["requested_mem_gb"]),
-    )
-    mem_plt.legend(loc="upper center", bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
-    mem_plt.set_ylabel("Memory Used in GB")
-    mem_plt.set_xlabel("Date Time")
-    mem_plt.set_xlim(
-        df_monitoring_task_shard.metrics_timestamp.min(),
-        df_monitoring_task_shard.metrics_timestamp.max(),
-    )  # Set x-axis limits
-    mem_plt2 = mem_plt.twiny()
-    mem_plt2.set_xlim(0, task_shard_duration)
-    mem_plt2.set_xlabel("Duration Time")
-    mem_plt.grid(True)
 
     disk_plt = axs[2]
-    disk_plt.plot(
-        df_monitoring_task_shard.metrics_timestamp.astype("O"),
-        disk_used_gb_array,
-        label="Disk Used",
+    subplot_resource_usage(
+        subplot=disk_plt,
+        df_monitoring_task_shard=df_monitoring_task_shard,
+        resource_used_array=disk_used_gb_array,
+        runtime_dic=runtime_dic,
+        task_shard_duration=task_shard_duration,
+        resource_label="Disk GB",
+        obtained_resource_key="available_disk_gb",
+        requested_resource_key="requested_disk_gb",
+        available_resource=runtime_dic["available_disk_gb"],
     )
-    disk_plt.axhline(
-        y=runtime_dic["available_disk_gb"],
-        color="r",
-        label="Max Disksize GB: %.2f" % (runtime_dic["available_disk_gb"]),
-    )
-    disk_plt.plot(
-        [],
-        [],
-        " ",
-        label="Obtained Disksize GB: {}".format(runtime_dic["available_disk_gb"]),
-    )
-    disk_plt.plot(
-        [],
-        [],
-        " ",
-        label="Requested Disksize GB: {}".format(runtime_dic["requested_disk_gb"]),
-    )
-    disk_plt.legend(loc="upper center", bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
-    disk_plt.set_ylabel("Diskspace Used in GB")
-    disk_plt.set_xlabel("Date Time")
-    disk_plt.set_xlim(
-        df_monitoring_task_shard.metrics_timestamp.min(),
-        df_monitoring_task_shard.metrics_timestamp.max(),
-    )  # Set x-axis limits
-    disk_plt2 = disk_plt.twiny()
-    disk_plt2.set_xlim(0, task_shard_duration)
-    disk_plt2.set_xlabel("Duration Time")
-    disk_plt.grid(True)
 
     disk_read_plt = axs[3]
-    disk_read_plt.plot(
-        df_monitoring_task_shard.metrics_timestamp.astype("O"),
-        disk_read_iops_array,
-        label="Disk Read IOps",
+    subplot_resource_usage(
+        subplot=disk_read_plt,
+        df_monitoring_task_shard=df_monitoring_task_shard,
+        resource_used_array=disk_read_iops_array,
+        runtime_dic=runtime_dic,
+        task_shard_duration=task_shard_duration,
+        resource_label="Disk Read_IOps",
     )
-    disk_read_plt.set_ylabel("Disk Read IOps")
-    disk_read_plt.set_xlabel("Date Time")
-    disk_read_plt.set_xlim(
-        df_monitoring_task_shard.metrics_timestamp.min(),
-        df_monitoring_task_shard.metrics_timestamp.max(),
-    )  # Set x-axis limits
-    disk_read_plt2 = disk_read_plt.twiny()
-    disk_read_plt2.set_xlim(0, task_shard_duration)
-    disk_read_plt2.set_xlabel("Duration Time")
-    disk_read_plt.grid(True)
 
     disk_write_plt = axs[4]
-    disk_write_plt.plot(
-        df_monitoring_task_shard.metrics_timestamp.astype("O"),
-        disk_write_iops_array,
-        label="Disk Write_IOps",
+    subplot_resource_usage(
+        subplot=disk_write_plt,
+        df_monitoring_task_shard=df_monitoring_task_shard,
+        resource_used_array=disk_write_iops_array,
+        runtime_dic=runtime_dic,
+        task_shard_duration=task_shard_duration,
+        resource_label="Disk Write_IOps",
     )
-    disk_write_plt.set_ylabel("Disk Write_IOps")
-    disk_write_plt.set_xlabel("Date Time")
-    disk_write_plt.set_xlim(
-        df_monitoring_task_shard.metrics_timestamp.min(),
-        df_monitoring_task_shard.metrics_timestamp.max(),
-    )  # Set x-axis limits
-    disk_write_plt2 = disk_write_plt.twiny()
-    disk_write_plt2.set_xlim(0, task_shard_duration)
-    disk_write_plt2.set_xlabel("Duration Time")
-    disk_write_plt.grid(True)
 
     return fig
 
