@@ -527,13 +527,10 @@ def plot_detailed_resource_usage(
     """
     # For size and style of plots
     dpi = 100
-    figsize = (plt_width / dpi, plt_height / dpi)  # width, height in inches
-    plt.rcParams["figure.figsize"] = figsize
-    plt.rcParams["figure.dpi"] = dpi
-    # plt.rcParams["figure.figsize"] = (15, 20)
+    fig, axs = plt.subplots(5, 1, figsize=(plt_width / dpi, plt_height / dpi), dpi=dpi)
     sns.set(style="whitegrid")
 
-    cpu_plt = plt.subplot(5, 1, 1)
+    cpu_plt = axs[0]
     cpu_plt.set_title(
         "Task Name: "
         + task_name
@@ -572,7 +569,7 @@ def plot_detailed_resource_usage(
     cpu_plt2.set_xlabel("Duration Time")
     cpu_plt.grid(True)
 
-    mem_plt = plt.subplot(5, 1, 2)
+    mem_plt = axs[1]
     mem_plt.plot(
         df_monitoring_task_shard.metrics_timestamp.astype("O"),
         df_monitoring_task_shard.metrics_mem_used_gb,
@@ -607,7 +604,7 @@ def plot_detailed_resource_usage(
     mem_plt2.set_xlabel("Duration Time")
     mem_plt.grid(True)
 
-    disk_plt = plt.subplot(5, 1, 3)
+    disk_plt = axs[2]
     disk_plt.plot(
         df_monitoring_task_shard.metrics_timestamp.astype("O"),
         disk_used_gb_array,
@@ -642,7 +639,7 @@ def plot_detailed_resource_usage(
     disk_plt2.set_xlabel("Duration Time")
     disk_plt.grid(True)
 
-    disk_read_plt = plt.subplot(5, 1, 4)
+    disk_read_plt = axs[3]
     disk_read_plt.plot(
         df_monitoring_task_shard.metrics_timestamp.astype("O"),
         disk_read_iops_array,
@@ -659,7 +656,7 @@ def plot_detailed_resource_usage(
     disk_read_plt2.set_xlabel("Duration Time")
     disk_read_plt.grid(True)
 
-    disk_write_plt = plt.subplot(5, 1, 5)
+    disk_write_plt = axs[4]
     disk_write_plt.plot(
         df_monitoring_task_shard.metrics_timestamp.astype("O"),
         disk_write_iops_array,
@@ -676,7 +673,7 @@ def plot_detailed_resource_usage(
     disk_write_plt2.set_xlabel("Duration Time")
     disk_write_plt.grid(True)
 
-    return plt
+    return fig
 
 
 def plot_shards(
@@ -696,6 +693,8 @@ def plot_shards(
     :param pdf:
     :return:
     """
+    resource_plt = plt.figure()
+
     for shard in shards:
         df_monitoring_task_shard = df_monitoring.metrics_runtime.loc[
             (df_monitoring.metrics_runtime["runtime_task_call_name"] == task_name)
@@ -752,7 +751,8 @@ def plot_shards(
         )
 
         resource_plt.subplots_adjust(hspace=0.5)
-    return plt
+
+    return resource_plt
 
 
 def plot_resource_usage(
