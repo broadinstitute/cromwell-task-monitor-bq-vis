@@ -552,7 +552,7 @@ def subplot_resource_usage(
             [],
             [],
             " ",
-            label=f"Obtained {resource_label}: {runtime_dic[obtained_resource_key]}",
+            label=f"Obtained {resource_label}: %s" % obtained_resource_key,
         )
     if requested_resource_key:
         subplot.plot(
@@ -627,8 +627,8 @@ def plot_detailed_resource_usage(
         task_shard_duration=task_shard_duration,
         resource_label="CPU",
         y_label="CPU % Used",
-        obtained_resource_key="available_cpu_cores",
-        requested_resource_key="requested_cpu_cores"
+        obtained_resource_key=str(runtime_dic["available_cpu_cores"]),
+        requested_resource_key="requested_cpu_cores",
     )
 
     mem_plt = axs[1]
@@ -640,7 +640,6 @@ def plot_detailed_resource_usage(
         task_shard_duration=task_shard_duration,
         resource_label="Memory",
         y_label="Memory GB Used",
-        obtained_resource_key="available_mem_gb",
         requested_resource_key="requested_mem_gb",
         available_resource=runtime_dic["available_mem_gb"],
     )
@@ -654,7 +653,6 @@ def plot_detailed_resource_usage(
         task_shard_duration=task_shard_duration,
         resource_label="Disk",
         y_label="Disk GB Used",
-        obtained_resource_key="available_disk_gb",
         requested_resource_key="requested_disk_gb",
         available_resource=runtime_dic["available_disk_gb"],
     )
