@@ -68,8 +68,8 @@ class TestPlotting:
             "requested_disk_gb": 50,
         }
 
-    def test_subplot_resource_usage(self,
-        subplot, df_monitoring_task_shard, resource_used_array, runtime_dic
+    def test_subplot_resource_usage(
+        self, subplot, df_monitoring_task_shard, resource_used_array, runtime_dic
     ):
         result = plotting.subplot_resource_usage(
             subplot=subplot,
