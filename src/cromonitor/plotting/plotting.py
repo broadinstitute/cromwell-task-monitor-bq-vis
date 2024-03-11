@@ -283,6 +283,19 @@ def generate_resource_plots_and_outliers(
     return bar_plot, violin_plot, lower_outlier_table, upper_outlier_table
 
 
+def get_unique_shards_for_task(df: pd.DataFrame, task_name_input: str):
+    """
+    Get all unique runtime_shard values for a given task name
+    from the runtime_metrics dataframe
+    :param df: runtime_metrics dataframe
+    :param task_name_input: Name of the task
+    :return:
+    """
+    return df.runtime_shard.loc[
+        (df["runtime_task_call_name"] == task_name_input)
+    ].unique()
+
+
 def plot_shard_summary(
     parent_workflow_id: str,
     metrics_runtime: pd.DataFrame,
@@ -312,10 +325,9 @@ def plot_shard_summary(
         ],
     )
 
-    # put dataframe into and array
-    summary_shards = df_filled.runtime_shard.loc[
-        (df_filled["runtime_task_call_name"] == task_name_input)
-    ].unique()
+    summary_shards = get_unique_shards_for_task(
+        df=df_filled, task_name_input=task_name_input
+    )
 
     (
         average_cpu_per_shard_clean_dict,
@@ -504,10 +516,11 @@ def subplot_resource_usage(
     runtime_dic: dict,
     task_shard_duration: int,
     resource_label: str,
+    y_label: str,
     obtained_resource_key: Optional[str] = None,
     requested_resource_key: Optional[str] = None,
     available_resource: Optional[float] = None,
-):
+) -> plt.Axes:
     """
     Plots the usage of a specific resource on a given subplot.
 
@@ -549,7 +562,7 @@ def subplot_resource_usage(
             label=f"Requested {resource_label}: {runtime_dic[requested_resource_key]}",
         )
     subplot.legend(loc="upper center", bbox_to_anchor=(1.20, 0.8), shadow=True, ncol=1)
-    subplot.set_ylabel(f"{resource_label} Percentage Used")
+    subplot.set_ylabel(f"{y_label}")
     subplot.set_xlabel("Date Time")
     subplot.set_xlim(
         df_monitoring_task_shard.metrics_timestamp.min(),
@@ -559,6 +572,8 @@ def subplot_resource_usage(
     subplt2.set_xlim(0, task_shard_duration)
     subplt2.set_xlabel("Duration Time")
     subplot.grid(True)
+
+    return subplot
 
 
 def plot_detailed_resource_usage(
@@ -611,6 +626,7 @@ def plot_detailed_resource_usage(
         runtime_dic=runtime_dic,
         task_shard_duration=task_shard_duration,
         resource_label="CPU",
+        y_label="CPU % Used",
         obtained_resource_key="available_cpu_cores",
         requested_resource_key="requested_cpu_cores"
     )
@@ -622,7 +638,8 @@ def plot_detailed_resource_usage(
         resource_used_array=df_monitoring_task_shard.metrics_mem_used_gb,
         runtime_dic=runtime_dic,
         task_shard_duration=task_shard_duration,
-        resource_label="Memory GB",
+        resource_label="Memory",
+        y_label="Memory GB Used",
         obtained_resource_key="available_mem_gb",
         requested_resource_key="requested_mem_gb",
         available_resource=runtime_dic["available_mem_gb"],
@@ -635,7 +652,8 @@ def plot_detailed_resource_usage(
         resource_used_array=disk_used_gb_array,
         runtime_dic=runtime_dic,
         task_shard_duration=task_shard_duration,
-        resource_label="Disk GB",
+        resource_label="Disk",
+        y_label="Disk GB Used",
         obtained_resource_key="available_disk_gb",
         requested_resource_key="requested_disk_gb",
         available_resource=runtime_dic["available_disk_gb"],
@@ -649,6 +667,7 @@ def plot_detailed_resource_usage(
         runtime_dic=runtime_dic,
         task_shard_duration=task_shard_duration,
         resource_label="Disk Read_IOps",
+        y_label="Disk Read_IOps",
     )
 
     disk_write_plt = axs[4]
@@ -659,6 +678,7 @@ def plot_detailed_resource_usage(
         runtime_dic=runtime_dic,
         task_shard_duration=task_shard_duration,
         resource_label="Disk Write_IOps",
+        y_label="Disk Write_IOps",
     )
 
     return fig
