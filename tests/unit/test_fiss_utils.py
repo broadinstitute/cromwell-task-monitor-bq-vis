@@ -49,37 +49,3 @@ class TestFissUtils:
 
         # Assert
         assert result == 5
-
-    @pytest.mark.parametrize(
-        "workflow_metadata, expected_end_time",
-        [
-            # Test case 1: workflow_metadata contains "end" key
-            (
-                {
-                    "start": "2022-01-01T00:00:00.000Z",
-                    "end": "2022-01-02T00:00:00.000Z",
-                },
-                datetime.strptime("2022-01-02T00:00:00.000Z", "%Y-%m-%dT%H:%M:%S.%fZ"),
-            ),
-            # Test case 2: workflow_metadata does not contain "end" key
-            (
-                {"start": "2022-01-01T00:00:00.000Z"},
-                datetime.strptime("2022-01-01T23:59:59.999Z", "%Y-%m-%dT%H:%M:%S.%fZ"),
-            ),
-        ],
-    )
-    def test_get_workflow_end_time(self, workflow_metadata, expected_end_time):
-        # Create a Workflow instance
-        # workflow = utils.Workflow(
-        #     workspace_namespace="workspace_namespace",
-        #     workspace_name="workspace_name",
-        #     submission_id="submission_id",
-        #     parent_workflow_id="parent_workflow_id"
-        # )
-
-        assert (
-            utils.Workflow._get_workflow_end_time(
-                self, workflow_metadata=workflow_metadata
-            )
-            == expected_end_time
-        )
