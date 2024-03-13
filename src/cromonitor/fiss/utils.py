@@ -204,7 +204,7 @@ class Workflow:
         self.workflow_name = self.get_workflow_name()
         self.subworkflow_ids = self._extract_subworkflow_ids(self.workflow_metadata)
         self.workflow_start_time = _convert_to_datetime(self.workflow_metadata["start"])
-        self.workflow_end_time = _convert_to_datetime(self.workflow_metadata["end"])
+        self.workflow_end_time = self._get_workflow_end_time(self.workflow_metadata)
         self.workfow_start_from_today = _days_from_today(self.workflow_start_time)
         self.workfow_end_from_today = _days_from_today(self.workflow_end_time)
 
@@ -228,6 +228,23 @@ class Workflow:
         :return:
         """
         return self.subworkflow_ids
+
+    def _get_workflow_end_time(self, workflow_metadata: dict) -> datetime:
+        """
+        Get the end time of a workflow
+        :param workflow_metadata: The workflow metadata
+        :return:
+        """
+        try:
+            return _convert_to_datetime(workflow_metadata["end"])
+        except KeyError as e:
+            log.handle_type_warning(
+                err=e,
+                message="No end time found for workflow. Using start date with end of day time instead",
+            )
+            return _convert_to_datetime(
+                workflow_metadata["start"].split("T")[0] + "T23:59:59.999Z"
+            )
 
     def _get_workflow_metadata(self) -> dict:
         """
