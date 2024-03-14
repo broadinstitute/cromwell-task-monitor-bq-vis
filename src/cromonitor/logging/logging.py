@@ -60,6 +60,13 @@ def handle_value_warning(err, message):
     logging.warning("Value WARNING: %s: %s", message, err)
 
 
+def handle_type_warning(err, message):
+    """
+    Handle a TypeError
+    """
+    logging.warning("Type WARNING: %s: %s", message, err)
+
+
 def handle_bq_warning(err, message):
     """
     Handle a warning from BigQuery

@@ -127,17 +127,19 @@ def process_fapi_response_df(
     return df_sorted
 
 
-def _convert_to_datetime(date_string):
+def _convert_to_datetime(date_string: str or None) -> datetime or None:
     """
     Convert a date string to a datetime object
     :param date_string: The date string
     :return:
     """
+    if date_string is None:
+        return None
     date_object = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
     return date_object
 
 
-def _days_from_today(target_date):
+def _days_from_today(target_date: datetime or None) -> int or None:
     """
     Get the number of days from today
     :param target_date:  The target date
@@ -204,9 +206,11 @@ class Workflow:
         self.workflow_name = self.get_workflow_name()
         self.subworkflow_ids = self._extract_subworkflow_ids(self.workflow_metadata)
         self.workflow_start_time = _convert_to_datetime(self.workflow_metadata["start"])
-        self.workflow_end_time = _convert_to_datetime(self.workflow_metadata["end"])
-        self.workfow_start_from_today = _days_from_today(self.workflow_start_time)
-        self.workfow_end_from_today = _days_from_today(self.workflow_end_time)
+        self.workflow_end_time = _convert_to_datetime(
+            self.workflow_metadata.get("end", None)
+        )
+        self.days_from_workflow_start = _days_from_today(self.workflow_start_time)
+        self.days_from_workflow_end = self._get_query_end_time()
 
     def get_workflow_metadata(self):
         """
@@ -228,6 +232,26 @@ class Workflow:
         :return:
         """
         return self.subworkflow_ids
+
+    def _get_query_end_time(self, padding=7) -> datetime:
+        """
+        Get the query end time. If the end time is None,
+        then the query end time is 7 days after the start time.
+        :param padding: The number of days to pad the end time by if it is None.
+        :return: The number of days end time is from today or 7 days after start time.
+        """
+
+        # If the workflow is still running, endtime is None.
+        # Thus, we query 7 days after from start time.
+
+        if self.workflow_end_time is None:
+            log.handle_value_warning(
+                err=None,
+                message="End time is None, "
+                "setting query end time to 7 days from start time.",
+            )
+            return _days_from_today(self.workflow_start_time) - padding
+        return _days_from_today(self.workflow_end_time)
 
     def _get_workflow_metadata(self) -> dict:
         """
