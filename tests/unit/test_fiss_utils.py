@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from unittest.mock import patch
+
 import pandas as pd
 import pytest
 
@@ -51,7 +52,7 @@ class TestFissUtils:
         # Assert
         assert result == 5
 
-    @patch('cromonitor.fiss.utils.get_workflow_metadata_api_call')
+    @patch("cromonitor.fiss.utils.get_workflow_metadata_api_call")
     @pytest.mark.parametrize(
         "days, expected",
         [
@@ -59,8 +60,9 @@ class TestFissUtils:
             (1, -6),
         ],
     )
-    def test_get_query_end_time(self, mock_get_workflow_metadata_api_call, days,
-                                expected):
+    def test_get_query_end_time(
+        self, mock_get_workflow_metadata_api_call, days, expected
+    ):
         class MockResponse:
             def __init__(self, status_code, json_data):
                 self.status_code = status_code
@@ -74,17 +76,16 @@ class TestFissUtils:
         date_14_days_ago = datetime.now() - timedelta(days=days)
 
         # Format the date in the desired format
-        formatted_date = date_14_days_ago.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        formatted_date = date_14_days_ago.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         mock_get_workflow_metadata_api_call.return_value = MockResponse(
-            status_code=200,
-            json_data={"start": f"{formatted_date}", "end": None}
+            status_code=200, json_data={"start": f"{formatted_date}", "end": None}
         )
         workflow = Workflow(
             workspace_namespace="namespace",
             workspace_name="workspace",
             submission_id="submission_id",
-            parent_workflow_id="workflow_id"
+            parent_workflow_id="workflow_id",
         )
 
         # Act
