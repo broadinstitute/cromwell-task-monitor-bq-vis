@@ -87,7 +87,7 @@ class CostQuery:
         self.formatted_query_results = self.format_bq_cost_query_results()
         return self.query_results
 
-    def create_bq_query_job_config(self):
+    def _create_bq_query_job_config(self):
         """
         Create BQ Job config to be used while executing a query.
         :param workflow_id:
@@ -115,7 +115,7 @@ class CostQuery:
             ]
         )
 
-    def checks_before_querying_bigquery(self):
+    def _checks_before_querying_bigquery(self):
         check_minimum_time_passed_since_workflow_completion(end_time=self.end_time)
         check_bq_table_schema(
             table_id=self.bq_cost_table, expected_schema=TERRA_GCP_BILLING_SCHEMA
@@ -130,7 +130,7 @@ class CostQuery:
             job_config=self.query_config,
         )
 
-    def format_bq_cost_query_results(
+    def _format_bq_cost_query_results(
         self, task_header: str = "task_name", cost_header: str = "cost"
     ) -> list[dict]:
         """
