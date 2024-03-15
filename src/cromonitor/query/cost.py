@@ -1,18 +1,23 @@
 # This module contains the class and functions to query the cost of a workflow
 # from bigquery.
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Union
 
 from google.cloud import bigquery
 from google.cloud.bigquery.table import RowIterator
 
-from .utils import check_bq_table_schema, check_bq_table_exists, \
-    check_workflow_id_exists_in_bq, check_cost_to_query_bq
 from .table_schema import TERRA_GCP_BILLING_SCHEMA
+from .utils import (
+    check_bq_table_exists,
+    check_bq_table_schema,
+    check_cost_to_query_bq,
+    check_workflow_id_exists_in_bq,
+)
 
 
-def check_minimum_time_passed_since_workflow_completion(end_time: datetime,
-                                                        min_hours: int = 24):
+def check_minimum_time_passed_since_workflow_completion(
+    end_time: datetime, min_hours: int = 24
+):
     """
     Make sure 24 hours have passed between job finish time and executing this command
     (finished time minus current time).
@@ -53,12 +58,13 @@ class CostQuery:
     Class for querying and holding the query results on cost.
     """
 
-    def __init__(self,
-                 workflow_id: str,
-                 bq_cost_table: str,
-                 start_time: datetime,
-                 end_time: datetime,
-                 ):
+    def __init__(
+        self,
+        workflow_id: str,
+        bq_cost_table: str,
+        start_time: datetime,
+        end_time: datetime,
+    ):
         self.end_time: datetime = end_time
         self.start_time: datetime = start_time
         self.bq_cost_table: str = bq_cost_table
@@ -83,50 +89,58 @@ class CostQuery:
 
     def create_bq_query_job_config(self):
         """
-           Create BQ Job config to be used while executing a query.
-           :param workflow_id:
-           :param start_date:
-           :param end_date:
-           :return:
-           """
+        Create BQ Job config to be used while executing a query.
+        :param workflow_id:
+        :param start_date:
+        :param end_date:
+        :return:
+        """
         formatted_start_date = self.start_time.strftime("%Y-%m-%d %H:%M:%S")
         formatted_end_date = self.end_time.strftime("%Y-%m-%d %H:%M:%S")
 
         return bigquery.QueryJobConfig(
             query_parameters=[
-                bigquery.ScalarQueryParameter(name="bq_cost_table", type_="STRING",
-                                              value=self.bq_cost_table),
-                bigquery.ScalarQueryParameter(name="workflow_id", type_="STRING",
-                                              value="%" + self.workflow_id),
-                bigquery.ScalarQueryParameter(name="start_date", type_="STRING",
-                                              value=formatted_start_date),
-                bigquery.ScalarQueryParameter(name="end_date", type_="STRING",
-                                              value=formatted_end_date),
+                bigquery.ScalarQueryParameter(
+                    name="bq_cost_table", type_="STRING", value=self.bq_cost_table
+                ),
+                bigquery.ScalarQueryParameter(
+                    name="workflow_id", type_="STRING", value="%" + self.workflow_id
+                ),
+                bigquery.ScalarQueryParameter(
+                    name="start_date", type_="STRING", value=formatted_start_date
+                ),
+                bigquery.ScalarQueryParameter(
+                    name="end_date", type_="STRING", value=formatted_end_date
+                ),
             ]
         )
 
     def checks_before_querying_bigquery(self):
         check_minimum_time_passed_since_workflow_completion(end_time=self.end_time)
-        check_bq_table_schema(table_id=self.bq_cost_table,
-                              expected_schema=TERRA_GCP_BILLING_SCHEMA)
+        check_bq_table_schema(
+            table_id=self.bq_cost_table, expected_schema=TERRA_GCP_BILLING_SCHEMA
+        )
         check_bq_table_exists(table_id=self.bq_cost_table)
-        check_workflow_id_exists_in_bq(table_id=self.bq_cost_table,
-                                       workflow_id=self.workflow_id)
-        check_cost_to_query_bq(project_id=self.bq_cost_table.split('.')[0],
-                               query=self.query_string, job_config=self.query_config
-                               )
+        check_workflow_id_exists_in_bq(
+            table_id=self.bq_cost_table, workflow_id=self.workflow_id
+        )
+        check_cost_to_query_bq(
+            project_id=self.bq_cost_table.split(".")[0],
+            query=self.query_string,
+            job_config=self.query_config,
+        )
 
-    def format_bq_cost_query_results(self,
-                                     task_header: str = "task_name",
-                                     cost_header: str = "cost") -> list[dict]:
+    def format_bq_cost_query_results(
+        self, task_header: str = "task_name", cost_header: str = "cost"
+    ) -> list[dict]:
         """
-            Turns bq query result object into list[dict], with each item being a dictionary
-            representing tasks and their cost of a workflow. Returns only task and cost columns
-            :param query_results: Query result from BQ
-            :param task_header: What to name new column to holding task names
-            :param cost_header: What to name new column to holding task cost
-            :return:
-            """
+        Turns bq query result object into list[dict], with each item being a dictionary
+        representing tasks and their cost of a workflow. Returns only task and cost columns
+        :param query_results: Query result from BQ
+        :param task_header: What to name new column to holding task names
+        :param cost_header: What to name new column to holding task cost
+        :return:
+        """
         query_rows: list = [dict(row) for row in self.query_results]
         formatted_query_rows = []
         for row in query_rows:
