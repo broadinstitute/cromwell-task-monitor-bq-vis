@@ -68,6 +68,8 @@ class CostQuery:
         self.end_time: datetime = end_time
         self.start_time: datetime = start_time
         self.bq_cost_table: str = bq_cost_table
+        self.project_id: str = bq_cost_table.split(".")[0]
+        self.bq_client: bigquery.Client = bigquery.Client(project=self.project_id)
         self.workflow_id: str = workflow_id
         self.query_string: str = create_cost_query()
         self.query_config: bigquery.QueryJobConfig = self._create_bq_query_job_config()
@@ -81,8 +83,7 @@ class CostQuery:
         """
         self._checks_before_querying_bigquery()
 
-        client = bigquery.Client()
-        query_job = client.query(self.query_string, job_config=self.query_config)
+        query_job = self.bq_client.query(self.query_string, job_config=self.query_config)
         self.query_results = query_job.result()
         self.formatted_query_results = self._format_bq_cost_query_results()
         return self.query_results
@@ -118,14 +119,17 @@ class CostQuery:
     def _checks_before_querying_bigquery(self):
         check_minimum_time_passed_since_workflow_completion(end_time=self.end_time)
         check_bq_table_schema(
+            bq_client=self.bq_client,
             table_id=self.bq_cost_table, expected_schema=TERRA_GCP_BILLING_SCHEMA
         )
-        check_bq_table_exists(table_id=self.bq_cost_table)
+        check_bq_table_exists(bq_client=self.bq_client, table_id=self.bq_cost_table)
         check_workflow_id_exists_in_bq(
-            table_id=self.bq_cost_table, workflow_id=self.workflow_id
+            bq_client=self.bq_client,
+            table_id=self.bq_cost_table,
+            workflow_id=self.workflow_id,
         )
         check_cost_to_query_bq(
-            project_id=self.bq_cost_table.split(".")[0],
+            bq_client=self.bq_client,
             query=self.query_string,
             job_config=self.query_config,
         )
