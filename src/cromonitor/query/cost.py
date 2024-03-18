@@ -70,7 +70,7 @@ class CostQuery:
         self.bq_cost_table: str = bq_cost_table
         self.workflow_id: str = workflow_id
         self.query_string: str = create_cost_query()
-        self.query_config: bigquery.QueryJobConfig = self.create_bq_query_job_config()
+        self.query_config: bigquery.QueryJobConfig = self._create_bq_query_job_config()
         self.query_results: Union[RowIterator, None] or None = None
         self.formatted_query_results: list[dict] or None = None
 
@@ -79,12 +79,12 @@ class CostQuery:
         Execute the cost query in bigquery
         :return:
         """
-        self.checks_before_querying_bigquery()
+        self._checks_before_querying_bigquery()
 
         client = bigquery.Client()
         query_job = client.query(self.query_string, job_config=self.query_config)
         self.query_results = query_job.result()
-        self.formatted_query_results = self.format_bq_cost_query_results()
+        self.formatted_query_results = self._format_bq_cost_query_results()
         return self.query_results
 
     def _create_bq_query_job_config(self):
