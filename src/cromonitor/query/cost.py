@@ -135,11 +135,10 @@ class CostQuery:
     ) -> list[dict]:
         """
         Turns bq query result object into list[dict], with each item being a dictionary
-        representing tasks and their cost of a workflow. Returns only task and cost columns
-        :param query_results: Query result from BQ
+        representing tasks and their cost of a workflow.
         :param task_header: What to name new column to holding task names
         :param cost_header: What to name new column to holding task cost
-        :return:
+        :return: list[dict]
         """
         query_rows: list = [dict(row) for row in self.query_results]
         formatted_query_rows = []
