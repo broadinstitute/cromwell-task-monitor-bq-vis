@@ -56,7 +56,7 @@ class CostQuery:
         self.project_id: str = bq_cost_table.split(".")[0]
         self.bq_client: bigquery.Client = bigquery.Client(project=self.project_id)
         self.workflow_id: str = workflow_id
-        self.query_string: str = self._create_cost_query()
+        self.query_template: str = self._create_cost_query()
         self.query_config: bigquery.QueryJobConfig = self._create_bq_query_job_config()
         self.query_results: Union[RowIterator, None] or None = None
         self.formatted_query_results: list[dict] or None = None
@@ -68,19 +68,22 @@ class CostQuery:
         """
         self._checks_before_querying_bigquery()
 
-        query_job = self.bq_client.query(self.query_string, job_config=self.query_config)
+        query_job = self.bq_client.query(
+            self.query_template, job_config=self.query_config
+        )
+
         self.query_results = query_job.result()
         self.formatted_query_results = self._format_bq_cost_query_results()
         return self.query_results
 
-    def get_param_query(self) -> str:
+    def query_string(self) -> str:
         """
         Get the query string with all parameters replaced by their value.
         :return: Query string
         """
 
         query_parameters: List[ScalarQueryParameter] = self.query_config.query_parameters
-        dry_run_string: str = self.query_string
+        dry_run_string: str = self.query_template
 
         # Adding '@' to the parameter name to match bq param naming convention
         params_dict = {"@" + param.name: param.value for param in query_parameters}
@@ -89,6 +92,25 @@ class CostQuery:
             dry_run_string = dry_run_string.replace(param_name, param_value)
 
         return dry_run_string
+
+    def results(self) -> list[dict]:
+        """
+        Get the formatted query results
+        :return: list[dict]
+        """
+        if self.formatted_query_results is None:
+            log.handle_user_error(
+                err=None,
+                message="Expecting list but results are None. Try running the query "
+                        "first."
+            )
+        elif not self.formatted_query_results:
+            log.handle_user_error(
+                err=None, message="No results found for the workflow."
+            )
+        else:
+            return self.formatted_query_results
+
 
     def _create_bq_query_job_config(self, date_padding: int = 1) -> bigquery.QueryJobConfig:
         """
@@ -132,7 +154,7 @@ class CostQuery:
         )
         check_cost_to_query_bq(
             bq_client=self.bq_client,
-            query=self.query_string,
+            query=self.query_template,
             job_config=self.query_config,
         )
 
