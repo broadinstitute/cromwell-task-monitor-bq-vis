@@ -58,7 +58,7 @@ class CostQuery:
         self.workflow_id: str = workflow_id
         self.query_template: str = self._create_cost_query()
         self.query_config: bigquery.QueryJobConfig = self._create_bq_query_job_config()
-        self.query_results: Union[RowIterator, None] or None = None
+        self.query_job: Union[bigquery.QueryJob, None] = None
         self.formatted_query_results: list[dict] or None = None
 
     def query_cost(self) -> Union[RowIterator, None]:
@@ -68,13 +68,18 @@ class CostQuery:
         """
         self._checks_before_querying_bigquery()
 
-        query_job = self.bq_client.query(
-            self.query_template, job_config=self.query_config
-        )
+        query_job: Union[bigquery.QueryJob, None] = None
 
-        self.query_results = query_job.result()
+        try:
+            query_job = self.bq_client.query(
+                self.query_template, job_config=self.query_config
+            )
+        except Exception as e:
+            log.handle_bq_error(err=e, message="Error while querying BigQuery")
+
+        self.query_job = query_job
         self.formatted_query_results = self._format_bq_cost_query_results()
-        return self.query_results
+        return self.query_job
 
     def query_string(self) -> str:
         """
@@ -166,7 +171,7 @@ class CostQuery:
         :param cost_header: What to name new column to holding task cost
         :return: list[dict]
         """
-        query_rows: list = [dict(row) for row in self.query_results]
+        query_rows: list = [dict(row) for row in self.query_job.result()]
         formatted_query_rows = []
         for row in query_rows:
             formatted_query_rows.append(
