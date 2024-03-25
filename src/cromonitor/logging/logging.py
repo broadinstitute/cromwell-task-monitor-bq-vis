@@ -5,6 +5,17 @@ This module contains functions to handle errors and warnings.
 import logging
 
 
+def handle_user_error(err, message=None):
+    """
+    Handle a user error
+    :param err:
+    :return:
+    """
+    if message:
+        logging.error("User ERROR: %s: %s", message, err)
+    else:
+        logging.error("A user error occurred: %s", err)
+
 def handle_value_error(err):
     """
     Handle a ValueError
