@@ -90,21 +90,24 @@ class CostQuery:
 
         return dry_run_string
 
-    def _create_bq_query_job_config(self):
+    def _create_bq_query_job_config(self, date_padding: int = 1) -> bigquery.QueryJobConfig:
         """
         Create BQ Job config to be used while executing a query.
-        :param workflow_id:
-        :param start_date:
-        :param end_date:
-        :return:
+        :param date_padding: Number of days to subtract from start and end dates
+        :return: bigquery.QueryJobConfig
         """
-        formatted_start_date = self.start_time.strftime("%Y-%m-%d %H:%M:%S")
-        formatted_end_date = self.end_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        formatted_start_date = (
+                self.start_time - timedelta(days=date_padding)
+        ).strftime("%Y-%m-%d")
+        formatted_end_date = (
+                self.end_time - timedelta(days=date_padding)
+        ).strftime("%Y-%m-%d")
 
         return bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter(
-                    name="workflow_id", type_="STRING", value="%" + self.workflow_id + "%"
+                    name="workflow_id", type_="STRING", value=f"%{self.workflow_id}%"
                 ),
                 bigquery.ScalarQueryParameter(
                     name="start_date", type_="STRING", value=formatted_start_date
