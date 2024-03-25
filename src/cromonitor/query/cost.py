@@ -104,10 +104,6 @@ class CostQuery:
                 message="Expecting list but results are None. Try running the query "
                         "first."
             )
-        elif not self.formatted_query_results:
-            log.handle_user_error(
-                err=None, message="No results found for the workflow."
-            )
         else:
             return self.formatted_query_results
 
