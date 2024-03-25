@@ -123,7 +123,7 @@ class CostQuery:
                 self.start_time - timedelta(days=date_padding)
         ).strftime("%Y-%m-%d")
         formatted_end_date = (
-                self.end_time - timedelta(days=date_padding)
+                self.end_time + timedelta(days=date_padding)
         ).strftime("%Y-%m-%d")
 
         return bigquery.QueryJobConfig(
