@@ -108,7 +108,7 @@ class CostQuery:
             return self.formatted_query_results
 
 
-    def _create_bq_query_job_config(self, date_padding: int = 1) -> bigquery.QueryJobConfig:
+    def _create_bq_query_job_config(self, date_padding: int = 2) -> bigquery.QueryJobConfig:
         """
         Create BQ Job config to be used while executing a query.
         :param date_padding: Number of days to subtract from start and end dates
@@ -196,7 +196,7 @@ class CostQuery:
              UNNEST(labels) AS label
             WHERE
              cost > 0
-             AND usage_start_time BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date)
+             AND TIMESTAMP_TRUNC(_PARTITIONTIME, DAY) BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date)
              AND label.key IN ('cromwell-workflow-id', 'terra-submission-id')
              AND label.value LIKE @workflow_id
     """
