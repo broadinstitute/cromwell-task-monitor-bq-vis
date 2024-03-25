@@ -20,7 +20,7 @@ from .utils import (
 
 
 def check_minimum_time_passed_since_workflow_completion(
-    end_time: datetime, min_hours: int = 24
+        end_time: datetime, min_hours: int = 24
 ):
     """
     Make sure 24 hours have passed between job finish time and executing this command
@@ -44,11 +44,11 @@ class CostQuery:
     """
 
     def __init__(
-        self,
-        workflow_id: str,
-        bq_cost_table: str,
-        start_time: datetime,
-        end_time: datetime,
+            self,
+            workflow_id: str,
+            bq_cost_table: str,
+            start_time: datetime,
+            end_time: datetime,
     ):
         self.end_time: datetime = end_time
         self.start_time: datetime = start_time
@@ -82,7 +82,8 @@ class CostQuery:
         :return: Query string
         """
 
-        query_parameters: List[ScalarQueryParameter] = self.query_config.query_parameters
+        query_parameters: List[
+            ScalarQueryParameter] = self.query_config.query_parameters
         dry_run_string: str = self.query_template
 
         # Adding '@' to the parameter name to match bq param naming convention
@@ -107,8 +108,9 @@ class CostQuery:
         else:
             return self.formatted_query_results
 
-
-    def _create_bq_query_job_config(self, date_padding: int = 2) -> bigquery.QueryJobConfig:
+    def _create_bq_query_job_config(
+            self, date_padding: int = 2
+    ) -> bigquery.QueryJobConfig:
         """
         Create BQ Job config to be used while executing a query.
         :param date_padding: Number of days to subtract from start and end dates
@@ -155,7 +157,7 @@ class CostQuery:
         )
 
     def _format_bq_cost_query_results(
-        self, task_header: str = "task_name", cost_header: str = "cost"
+            self, task_header: str = "task_name", cost_header: str = "cost"
     ) -> list[dict]:
         """
         Turns bq query result object into list[dict], with each item being a dictionary
@@ -200,4 +202,3 @@ class CostQuery:
              AND label.key IN ('cromwell-workflow-id', 'terra-submission-id')
              AND label.value LIKE '@workflow_id'
     """
-
