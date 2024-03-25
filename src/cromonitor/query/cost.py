@@ -6,6 +6,10 @@ from typing import Union
 from google.cloud import bigquery
 from google.cloud.bigquery.table import RowIterator
 
+from typing import List
+from google.cloud.bigquery import ScalarQueryParameter
+from ..logging import logging as log
+
 from .table_schema import TERRA_GCP_BILLING_SCHEMA
 from .utils import (
     check_bq_table_exists,
@@ -34,25 +38,6 @@ def check_minimum_time_passed_since_workflow_completion(
     return (True, delta) if delta > min_delta else (False, delta)
 
 
-def create_cost_query():
-    """
-    Create an SQL query to be executed in BQ to retrieve workflow
-    cost breakdown per workflow task.
-    :return:
-    """
-    return f"""
-                    SELECT wfid.value as cromwell_workflow_id, service.description, task.value as task_name, sum(cost) as cost
-                    FROM @bq_cost_table as billing, UNNEST(labels) as wfid, UNNEST(labels) as task
-                    WHERE cost > 0
-                    AND task.key LIKE "wdl-task-name"
-                    AND wfid.key LIKE "cromwell-workflow-id"
-                    AND wfid.value like @workflow_id
-                    AND partition_time BETWEEN @start_date AND @end_date
-                    GROUP BY 1,2,3
-                    ORDER BY 4 DESC
-                    """
-
-
 class CostQuery:
     """
     Class for querying and holding the query results on cost.
@@ -71,7 +56,7 @@ class CostQuery:
         self.project_id: str = bq_cost_table.split(".")[0]
         self.bq_client: bigquery.Client = bigquery.Client(project=self.project_id)
         self.workflow_id: str = workflow_id
-        self.query_string: str = create_cost_query()
+        self.query_string: str = self._create_cost_query()
         self.query_config: bigquery.QueryJobConfig = self._create_bq_query_job_config()
         self.query_results: Union[RowIterator, None] or None = None
         self.formatted_query_results: list[dict] or None = None
@@ -88,6 +73,23 @@ class CostQuery:
         self.formatted_query_results = self._format_bq_cost_query_results()
         return self.query_results
 
+    def get_param_query(self) -> str:
+        """
+        Get the query string with all parameters replaced by their value.
+        :return: Query string
+        """
+
+        query_parameters: List[ScalarQueryParameter] = self.query_config.query_parameters
+        dry_run_string: str = self.query_string
+
+        # Adding '@' to the parameter name to match bq param naming convention
+        params_dict = {"@" + param.name: param.value for param in query_parameters}
+
+        for param_name, param_value in params_dict.items():
+            dry_run_string = dry_run_string.replace(param_name, param_value)
+
+        return dry_run_string
+
     def _create_bq_query_job_config(self):
         """
         Create BQ Job config to be used while executing a query.
@@ -102,10 +104,7 @@ class CostQuery:
         return bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter(
-                    name="bq_cost_table", type_="STRING", value=self.bq_cost_table
-                ),
-                bigquery.ScalarQueryParameter(
-                    name="workflow_id", type_="STRING", value="%" + self.workflow_id
+                    name="workflow_id", type_="STRING", value="%" + self.workflow_id + "%"
                 ),
                 bigquery.ScalarQueryParameter(
                     name="start_date", type_="STRING", value=formatted_start_date
@@ -152,3 +151,32 @@ class CostQuery:
             )
 
         return formatted_query_rows
+
+    def _create_cost_query(self) -> str:
+        """
+        Create an SQL query to be executed in BQ to retrieve workflow
+        cost breakdown per workflow task.
+        :return:
+        """
+
+        return f"""
+            SELECT
+             project.id AS google_project_id,
+             (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-workflow-id') AS cromwell_id,  
+             (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'terra-submission-id') AS submission_id, 
+             (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name,
+             (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/machine_spec') AS machine_spec,
+             (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/cores') AS machine_cores,
+             (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/memory') AS machine_memory,
+             usage_start_time,
+             service.description AS cost_description,
+             cost
+            FROM {self.bq_cost_table} AS billing,
+             UNNEST(labels) AS label
+            WHERE
+             cost > 0
+             AND usage_start_time BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date)
+             AND label.key IN ('cromwell-workflow-id', 'terra-submission-id')
+             AND label.value LIKE @workflow_id
+    """
+

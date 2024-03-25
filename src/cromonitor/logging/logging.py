@@ -14,6 +14,15 @@ def handle_value_error(err):
     logging.error("A ValueError occurred: %s", err)
 
 
+def handle_key_error(err):
+    """
+    Handle a KeyError
+    :param err:
+    :return:
+    """
+    logging.error("A KeyError occurred: %s", err)
+
+
 def handle_type_error(err):
     """
     Handle a TypeError
