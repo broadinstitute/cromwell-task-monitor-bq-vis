@@ -196,8 +196,8 @@ class CostQuery:
              UNNEST(labels) AS label
             WHERE
              cost > 0
-             AND TIMESTAMP_TRUNC(_PARTITIONTIME, DAY) BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date)
+             AND TIMESTAMP_TRUNC(_PARTITIONTIME, DAY) BETWEEN TIMESTAMP('@start_date') AND TIMESTAMP('@end_date')
              AND label.key IN ('cromwell-workflow-id', 'terra-submission-id')
-             AND label.value LIKE @workflow_id
+             AND label.value LIKE '@workflow_id'
     """
 
