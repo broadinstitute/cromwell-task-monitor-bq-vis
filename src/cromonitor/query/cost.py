@@ -15,7 +15,6 @@ from .utils import (
     check_bq_table_exists,
     check_bq_table_schema,
     check_cost_to_query_bq,
-    check_workflow_id_exists_in_bq,
 )
 
 
@@ -31,7 +30,7 @@ def check_minimum_time_passed_since_workflow_completion(
     :return:
     """
 
-    delta = datetime.now(timezone.utc) - end_time
+    delta = datetime.now() - end_time.replace(tzinfo=None)
 
     min_delta = timedelta(hours=min_hours)
 
@@ -155,11 +154,6 @@ class CostQuery:
             table_id=self.bq_cost_table, expected_schema=TERRA_GCP_BILLING_SCHEMA
         )
         check_bq_table_exists(bq_client=self.bq_client, table_id=self.bq_cost_table)
-        check_workflow_id_exists_in_bq(
-            bq_client=self.bq_client,
-            table_id=self.bq_cost_table,
-            workflow_id=self.workflow_id,
-        )
         check_cost_to_query_bq(
             bq_client=self.bq_client,
             query=self.query_template,

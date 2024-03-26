@@ -1,3 +1,5 @@
+import copy
+
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 
@@ -64,20 +66,20 @@ def get_bytes_for_query_dry_run(
     :return:
     """
 
-    # Set the job configuration dry run to True and use_query_cache to False
-    job_config.dry_run = True
-    job_config.use_query_cache = False
+    # Create a local copy of the job configuration
+    local_job_config = copy.deepcopy(job_config)
 
-    if job_config.dry_run is False:
+    # Set the job configuration dry run to True and use_query_cache to False
+    local_job_config.dry_run = True
+    local_job_config.use_query_cache = False
+
+    if local_job_config.dry_run is False:
         log.handle_bq_error(
             err=None, message="Dry run is not set to True for checking cost."
         )
 
-    # TODO: Remove this line
-    # job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
-
     # Start the query, passing in the extra configuration.
-    query_job = bq_client.query(query, job_config=job_config)  # Make an API request.
+    query_job = bq_client.query(query, job_config=local_job_config)
 
     return int(query_job.total_bytes_processed)
 
@@ -146,39 +148,6 @@ def check_bq_table_exists(bq_client: bigquery.Client, table_id: str) -> None:
         bq_client.get_table(table_id)  # Make an API request.
     except NotFound as e:
         log.handle_bq_error(err=e, message="Table is not found.")
-
-
-def check_workflow_id_exists_in_bq(
-        bq_client: bigquery.Client, table_id: str, workflow_id: str
-) -> bool:
-    """
-    Check if the workflow id exists in bigquery table
-    :param bq_client:
-    :param table_id: The table id in bigquery
-    :param workflow_id: The workflow id to check
-    :return:
-    """
-
-    # Gives a boolean result True if the workflow_id exists in the table False otherwise
-    query = f"""
-        SELECT EXISTS(SELECT 1 FROM {table_id} WHERE workflow_id = '{workflow_id}')
-        """
-
-    try:
-        query_job = bq_client.query(query)
-        results = query_job.result()  # Wait for results
-
-        # Access the Boolean result directly
-        workflow_exists: bool = results[0][
-            0
-        ]  # Assuming a single-column, single-row result
-
-        return workflow_exists
-
-    except Exception as e:
-        log.handle_bq_error(
-            err=e, message="Error checking if workflow id exists in BQ."
-        )
 
 
 def get_project_id_from_table_id(table_id: str) -> str:
