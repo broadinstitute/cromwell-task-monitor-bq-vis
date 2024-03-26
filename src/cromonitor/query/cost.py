@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone, date
 from typing import Union
 
+import pandas as pd
 from google.cloud import bigquery
 from google.cloud.bigquery.table import RowIterator
 
@@ -58,7 +59,6 @@ class CostQuery:
         self.query_template: str = self._create_cost_query()
         self.query_config: bigquery.QueryJobConfig = self._create_bq_query_job_config()
         self.query_job: Union[bigquery.QueryJob, None] = None
-        self.formatted_query_results: list[dict] or None = None
 
     def query_cost(self) -> Union[RowIterator, None]:
         """
@@ -77,7 +77,6 @@ class CostQuery:
             log.handle_bq_error(err=e, message="Error while querying BigQuery")
 
         self.query_job = query_job
-        self.formatted_query_results = self._format_bq_cost_query_results()
         return self.query_job
 
     def query_string(self) -> str:
@@ -95,27 +94,35 @@ class CostQuery:
 
         for param_name, param_value in params_dict.items():
             if isinstance(param_value, date):
-                dry_run_string = dry_run_string.replace(param_name, param_value.strftime("%Y-%m-%d"))
+                dry_run_string = dry_run_string.replace(param_name,
+                                                        param_value.strftime(
+                                                            "%Y-%m-%d"))
             elif isinstance(param_value, str):
                 dry_run_string = dry_run_string.replace(param_name, param_value)
             else:
-                log.handle_value_error(err=f"Unexpected parameter type: {type(param_value)}")
+                log.handle_value_error(
+                    err=f"Unexpected parameter type: {type(param_value)}")
 
         return dry_run_string
 
-    def results(self) -> list[dict]:
+    def results(self, to_dataframe: bool = False) -> list[dict] or pd.DataFrame:
         """
-        Get the formatted query results
+        Get the formatted query results as a list of dictionaries or as a pandas dataframe
+        :param to_dataframe: If True, return the results as a pandas dataframe
         :return: list[dict]
         """
-        if self.formatted_query_results is None:
+
+        if self.query_job is None:
             log.handle_user_error(
                 err=None,
-                message="Expecting list but results are None. Try running the query "
+                message="Expecting query job but it is None. Try running the query "
                         "first."
             )
         else:
-            return self.formatted_query_results
+            if to_dataframe:
+                return self.query_job.to_dataframe()
+            else:
+                return self._format_bq_cost_query_results()
 
     def _create_bq_query_job_config(
             self, date_padding: int = 2
@@ -160,24 +167,14 @@ class CostQuery:
             job_config=self.query_config,
         )
 
-    def _format_bq_cost_query_results(
-            self, task_header: str = "task_name", cost_header: str = "cost"
-    ) -> list[dict]:
+    def _format_bq_cost_query_results(self) -> list[dict]:
         """
         Turns bq query result object into list[dict], with each item being a dictionary
         representing tasks and their cost of a workflow.
-        :param task_header: What to name new column to holding task names
-        :param cost_header: What to name new column to holding task cost
-        :return: list[dict]
+        :return: List[dict]
         """
-        query_rows: list = [dict(row) for row in self.query_job.result()]
-        formatted_query_rows = []
-        for row in query_rows:
-            formatted_query_rows.append(
-                {task_header: row.get("task_name"), cost_header: row.get("cost")}
-            )
 
-        return formatted_query_rows
+        return [dict(row) for row in self.query_job.result()]
 
     def _create_cost_query(self) -> str:
         """
