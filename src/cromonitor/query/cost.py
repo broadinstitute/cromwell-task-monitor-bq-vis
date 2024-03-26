@@ -1,6 +1,6 @@
 # This module contains the class and functions to query the cost of a workflow
 # from bigquery.
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from typing import Union
 
 from google.cloud import bigquery
@@ -95,7 +95,12 @@ class CostQuery:
         params_dict = {"@" + param.name: param.value for param in query_parameters}
 
         for param_name, param_value in params_dict.items():
-            dry_run_string = dry_run_string.replace(param_name, param_value)
+            if isinstance(param_value, date):
+                dry_run_string = dry_run_string.replace(param_name, param_value.strftime("%Y-%m-%d"))
+            elif isinstance(param_value, str):
+                dry_run_string = dry_run_string.replace(param_name, param_value)
+            else:
+                log.handle_value_error(err=f"Unexpected parameter type: {type(param_value)}")
 
         return dry_run_string
 
@@ -135,10 +140,10 @@ class CostQuery:
                     name="workflow_id", type_="STRING", value=f"%{self.workflow_id}%"
                 ),
                 bigquery.ScalarQueryParameter(
-                    name="start_date", type_="STRING", value=formatted_start_date
+                    name="start_date", type_="DATE", value=formatted_start_date
                 ),
                 bigquery.ScalarQueryParameter(
-                    name="end_date", type_="STRING", value=formatted_end_date
+                    name="end_date", type_="DATE", value=formatted_end_date
                 ),
             ]
         )
@@ -203,7 +208,7 @@ class CostQuery:
              UNNEST(labels) AS label
             WHERE
              cost > 0
-             AND TIMESTAMP_TRUNC(_PARTITIONTIME, DAY) BETWEEN TIMESTAMP('@start_date') AND TIMESTAMP('@end_date')
+             AND TIMESTAMP_TRUNC(_PARTITIONTIME, DAY) BETWEEN TIMESTAMP(@start_date) AND TIMESTAMP(@end_date)
              AND label.key IN ('cromwell-workflow-id', 'terra-submission-id')
-             AND label.value LIKE '@workflow_id'
+             AND label.value LIKE @workflow_id
     """
