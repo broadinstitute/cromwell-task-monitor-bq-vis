@@ -29,155 +29,66 @@ METRICS_SCHEMA = [
 ]
 
 TERRA_GCP_BILLING_SCHEMA = [
-    SchemaField("billing_account_id", "STRING", "NULLABLE"),
-    SchemaField(
-        name="service",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("id", "STRING", "NULLABLE"),
-            SchemaField("description", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField(
-        name="sku",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("id", "STRING", "NULLABLE"),
-            SchemaField("description", "STRING", "NULLABLE"),
-        ),
-
-    ),
-    SchemaField("usage_start_time", "TIMESTAMP", "NULLABLE"),
-    SchemaField("usage_end_time", "TIMESTAMP", "NULLABLE"),
-    SchemaField(
-        name="project",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("id", "STRING", "NULLABLE"),
-            SchemaField("number", "STRING", "NULLABLE"),
-            SchemaField("name", "STRING", "NULLABLE"),
-            SchemaField(
-                name="labels",
-                field_type="RECORD",
-                mode="REPEATED",
-                fields=(
-                    SchemaField("key", "STRING", "NULLABLE"),
-                    SchemaField("value", "STRING", "NULLABLE"),
-                ),
-            ),
-            SchemaField("ancestry_numbers", "STRING", "NULLABLE"),
-            SchemaField(
-                name="ancestors",
-                field_type="RECORD",
-                mode="REPEATED",
-                fields=(
-                    SchemaField(
-                        "resource_name", "STRING", "NULLABLE"),
-                    SchemaField(
-                        "display_name", "STRING", "NULLABLE"),
-                ),
-            ),
-        ),
-    ),
-    SchemaField(
-        name="labels",
-        field_type="RECORD",
-        mode="REPEATED",
-        fields=(
-            SchemaField("key", "STRING", "NULLABLE"),
-            SchemaField("value", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField(
-        name="system_labels",
-        field_type="RECORD",
-        mode="REPEATED",
-        fields=(
-            SchemaField("key", "STRING", "NULLABLE"),
-            SchemaField("value", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField(
-        name="location",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("location", "STRING", "NULLABLE"),
-            SchemaField("country", "STRING", "NULLABLE"),
-            SchemaField("region", "STRING", "NULLABLE"),
-            SchemaField("zone", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField(
-        name="resource",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("name", "STRING", "NULLABLE"),
-            SchemaField("global_name", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField("export_time", "TIMESTAMP", "NULLABLE"),
-    SchemaField("cost", "FLOAT", "NULLABLE"),
-    SchemaField("currency", "STRING", "NULLABLE"),
-    SchemaField("currency_conversion_rate", "FLOAT", "NULLABLE"),
-    SchemaField(
-        name="usage",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("amount", "FLOAT", "NULLABLE"),
-            SchemaField("unit", "STRING", "NULLABLE"),
-            SchemaField(
-                "amount_in_pricing_units", "FLOAT", "NULLABLE"),
-            SchemaField("pricing_unit", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField(
-        name="credits",
-        field_type="RECORD",
-        mode="REPEATED",
-        fields=(
-            SchemaField("name", "STRING", "NULLABLE"),
-            SchemaField("amount", "FLOAT", "NULLABLE"),
-            SchemaField("full_name", "STRING", "NULLABLE"),
-            SchemaField("id", "STRING", "NULLABLE"),
-            SchemaField("type", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField(
-        name="invoice",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("month", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField("cost_type", "STRING", "NULLABLE"),
-    SchemaField(
-        name="adjustment_info",
-        field_type="RECORD",
-        mode="NULLABLE",
-        fields=(
-            SchemaField("id", "STRING", "NULLABLE"),
-            SchemaField("description", "STRING", "NULLABLE"),
-            SchemaField("mode", "STRING", "NULLABLE"),
-            SchemaField("type", "STRING", "NULLABLE"),
-        ),
-    ),
-    SchemaField("partition_time", "TIMESTAMP", "NULLABLE"),
-    SchemaField("partition_date", "DATE", "NULLABLE"),
-    SchemaField(
-        name="tags",
-        field_type="RECORD",
-        mode="REPEATED",
-        fields=(
-            SchemaField("key", "STRING", "NULLABLE"),
-            SchemaField("value", "STRING", "NULLABLE"),
-            SchemaField("inherited", "BOOLEAN", "NULLABLE"),
-        ),
-    ),
-]
+    SchemaField('billing_account_id', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('service', 'RECORD', 'NULLABLE', None, '', (
+    SchemaField('id', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('description', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('sku', 'RECORD', 'NULLABLE', None, '', (
+    SchemaField('id', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('description', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('usage_start_time', 'TIMESTAMP', 'NULLABLE', None, '', (), None),
+    SchemaField('usage_end_time', 'TIMESTAMP', 'NULLABLE', None, '', (), None),
+    SchemaField('project', 'RECORD', 'NULLABLE', None, '', (
+    SchemaField('id', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('number', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('name', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('labels', 'RECORD', 'REPEATED', None, '', (
+    SchemaField('key', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('value', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('ancestry_numbers', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('ancestors', 'RECORD', 'REPEATED', None, '', (
+    SchemaField('resource_name', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('display_name', 'STRING', 'NULLABLE', None, '', (), None)), None)),
+                None), SchemaField('labels', 'RECORD', 'REPEATED', None, '', (
+    SchemaField('key', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('value', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('system_labels', 'RECORD', 'REPEATED', None, '', (
+    SchemaField('key', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('value', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('location', 'RECORD', 'NULLABLE', None, '', (
+    SchemaField('location', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('country', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('region', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('zone', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('export_time', 'TIMESTAMP', 'NULLABLE', None, '', (), None),
+    SchemaField('cost', 'FLOAT', 'NULLABLE', None, '', (), None),
+    SchemaField('currency', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('currency_conversion_rate', 'FLOAT', 'NULLABLE', None, '', (), None),
+    SchemaField('usage', 'RECORD', 'NULLABLE', None, '', (
+    SchemaField('amount', 'FLOAT', 'NULLABLE', None, '', (), None),
+    SchemaField('unit', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('amount_in_pricing_units', 'FLOAT', 'NULLABLE', None, '', (), None),
+    SchemaField('pricing_unit', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('credits', 'RECORD', 'REPEATED', None, '', (
+    SchemaField('name', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('amount', 'FLOAT', 'NULLABLE', None, '', (), None),
+    SchemaField('full_name', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('id', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('type', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('invoice', 'RECORD', 'NULLABLE', None, '',
+                (SchemaField('month', 'STRING', 'NULLABLE', None, '', (), None),),
+                None),
+    SchemaField('cost_type', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('adjustment_info', 'RECORD', 'NULLABLE', None, '', (
+    SchemaField('id', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('description', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('mode', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('type', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('tags', 'RECORD', 'REPEATED', None, '', (
+    SchemaField('key', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('value', 'STRING', 'NULLABLE', None, '', (), None),
+    SchemaField('inherited', 'BOOLEAN', 'NULLABLE', None, '', (), None),
+    SchemaField('namespace', 'STRING', 'NULLABLE', None, '', (), None)), None),
+    SchemaField('cost_at_list', 'FLOAT', 'NULLABLE', None, None, (), None),
+    SchemaField('transaction_type', 'STRING', 'NULLABLE', None, None, (), None),
+    SchemaField('seller_name', 'STRING', 'NULLABLE', None, None, (), None)]
