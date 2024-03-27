@@ -2,7 +2,7 @@
 This module contains utility functions for interacting with the FireCloud API
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import firecloud.api as fapi
@@ -136,6 +136,7 @@ def _convert_to_datetime(date_string: str or None) -> datetime or None:
     if date_string is None:
         return None
     date_object = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+    date_object = date_object.replace(tzinfo=timezone.utc)
     return date_object
 
 
