@@ -16,6 +16,8 @@ from .utils import (
     check_bq_table_exists,
     check_bq_table_schema,
     check_cost_to_query_bq,
+    bq_query_cost_calculation,
+
 )
 
 
@@ -123,6 +125,23 @@ class CostQuery:
                 return self.query_job.to_dataframe()
             else:
                 return self._format_bq_cost_query_results()
+
+    def get_cost_to_query(self) -> float:
+        """
+        Get the cost of the query that was executed.
+        The cost is calculated based on the amount of data processed by the query.
+        The cost is calculated as follows:
+        cost = bytes_processed / (1024 * 1024 * 1024 * 1024) * bq_ondemand_cost
+
+        Where bq_ondemand_cost is the cost of running the query per TB, ~6.25.
+
+        :return: Float
+        """
+        return bq_query_cost_calculation(
+            query=self.query_template,
+            bq_client=self.bq_client,
+            job_config=self.query_config
+        )
 
     def _create_bq_query_job_config(
             self, date_padding: int = 2
