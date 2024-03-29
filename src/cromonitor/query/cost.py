@@ -204,16 +204,21 @@ class CostQuery:
 
         return f"""
             SELECT
-             project.id AS google_project_id,
-             (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-workflow-id') AS cromwell_id,  
-             (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'terra-submission-id') AS submission_id, 
-             (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name,
-             (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/machine_spec') AS machine_spec,
-             (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/cores') AS machine_cores,
-             (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/memory') AS machine_memory,
-             usage_start_time,
-             service.description AS cost_description,
-             cost
+              -- Workflow details
+              project.id AS google_project_id,
+              (SELECT REGEXP_REPLACE(value, r'^terra-', '') FROM UNNEST(labels) AS l WHERE l.key = 'terra-submission-id') AS submission_id, 
+              (SELECT REGEXP_REPLACE(value, r'^cromwell-', '') FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-workflow-id') AS workflow_id,  
+              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name,
+              -- Cost breakdown
+              service.description AS cost_service,
+              sku.description AS cost_description,
+              cost,
+              -- Machine specs
+              (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/machine_spec') AS machine_spec,
+              (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/cores') AS machine_cores,
+              (SELECT value FROM UNNEST(system_labels) AS l WHERE l.key = 'compute.googleapis.com/memory') AS machine_memory,
+              usage_start_time,
+              usage_end_time
             FROM {self.bq_cost_table} AS billing,
              UNNEST(labels) AS label
             WHERE
