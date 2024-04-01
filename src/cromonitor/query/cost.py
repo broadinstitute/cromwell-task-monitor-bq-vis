@@ -1,6 +1,6 @@
 # This module contains the class and functions to query the cost of a workflow
 # from bigquery.
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, date
 from typing import Union
 
 import pandas as pd
@@ -10,6 +10,7 @@ from google.cloud.bigquery.table import RowIterator
 from typing import List
 from google.cloud.bigquery import ScalarQueryParameter
 from ..logging import logging as log
+import logging
 
 from .table_schema import TERRA_GCP_BILLING_SCHEMA
 from .utils import (
@@ -51,7 +52,14 @@ class CostQuery:
             bq_cost_table: str,
             start_time: datetime,
             end_time: datetime,
+            debug: bool = False
     ):
+
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
+
         self.end_time: datetime = end_time
         self.start_time: datetime = start_time
         self.bq_cost_table: str = bq_cost_table
@@ -67,11 +75,13 @@ class CostQuery:
         Execute the cost query in bigquery
         :return:
         """
+        logging.debug("Running checks before querying BigQuery.")
         self._checks_before_querying_bigquery()
 
         query_job: Union[bigquery.QueryJob, None] = None
 
         try:
+            logging.debug("Executing the query.")
             query_job = self.bq_client.query(
                 self.query_template, job_config=self.query_config
             )
@@ -79,6 +89,10 @@ class CostQuery:
             log.handle_bq_error(err=e, message="Error while querying BigQuery")
 
         self.query_job = query_job
+        logging.info("Query executed successfully.")
+        logging.info(f"bytes processed: {query_job.total_bytes_processed}")
+        logging.info(f"cost to query: {self.get_cost_to_query()}")
+
         return self.query_job
 
     def query_string(self) -> str:
@@ -208,7 +222,9 @@ class CostQuery:
               project.id AS google_project_id,
               (SELECT REGEXP_REPLACE(value, r'^terra-', '') FROM UNNEST(labels) AS l WHERE l.key = 'terra-submission-id') AS submission_id, 
               (SELECT REGEXP_REPLACE(value, r'^cromwell-', '') FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-workflow-id') AS workflow_id,  
-              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name,
+              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name, 
+              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-sub-workflow-name') AS subworkflow_name,
+              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-call-alias') AS task_alias,
               -- Cost breakdown
               service.description AS cost_service,
               sku.description AS cost_description,
