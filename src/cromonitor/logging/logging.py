@@ -16,6 +16,7 @@ def handle_user_error(err, message=None):
     else:
         logging.error("A user error occurred: %s", err)
 
+
 def handle_value_error(err):
     """
     Handle a ValueError

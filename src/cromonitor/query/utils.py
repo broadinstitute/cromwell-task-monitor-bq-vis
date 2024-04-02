@@ -108,7 +108,9 @@ def bq_query_cost_calculation(
 
 
 # check table schema (utility function)
-def check_bq_table_schema(bq_client: bigquery.Client, table_id: str, expected_schema: dict) -> None:
+def check_bq_table_schema(
+    bq_client: bigquery.Client, table_id: str, expected_schema: dict
+) -> None:
     """
     Check the schema of the table in bigquery
     :return:

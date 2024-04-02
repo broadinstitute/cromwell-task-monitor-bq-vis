@@ -1,29 +1,26 @@
 # This module contains the class and functions to query the cost of a workflow
 # from bigquery.
-from datetime import datetime, timedelta, date
-from typing import Union
+import logging
+from datetime import date, datetime, timedelta
+from typing import List, Union
 
 import pandas as pd
 from google.cloud import bigquery
+from google.cloud.bigquery import ScalarQueryParameter
 from google.cloud.bigquery.table import RowIterator
 
-from typing import List
-from google.cloud.bigquery import ScalarQueryParameter
 from ..logging import logging as log
-import logging
-
 from .table_schema import TERRA_GCP_BILLING_SCHEMA
 from .utils import (
+    bq_query_cost_calculation,
     check_bq_table_exists,
     check_bq_table_schema,
     check_cost_to_query_bq,
-    bq_query_cost_calculation,
-
 )
 
 
 def check_minimum_time_passed_since_workflow_completion(
-        end_time: datetime, min_hours: int = 24
+    end_time: datetime, min_hours: int = 24
 ):
     """
     Make sure 24 hours have passed between job finish time and executing this command
@@ -47,12 +44,12 @@ class CostQuery:
     """
 
     def __init__(
-            self,
-            workflow_id: str,
-            bq_cost_table: str,
-            start_time: datetime,
-            end_time: datetime,
-            debug: bool = False
+        self,
+        workflow_id: str,
+        bq_cost_table: str,
+        start_time: datetime,
+        end_time: datetime,
+        debug: bool = False,
     ):
 
         if not workflow_id:
@@ -110,8 +107,9 @@ class CostQuery:
         :return: Query string
         """
 
-        query_parameters: List[
-            ScalarQueryParameter] = self.query_config.query_parameters
+        query_parameters: List[ScalarQueryParameter] = (
+            self.query_config.query_parameters
+        )
         dry_run_string: str = self.query_template
 
         # Adding '@' to the parameter name to match bq param naming convention
@@ -119,20 +117,21 @@ class CostQuery:
 
         for param_name, param_value in params_dict.items():
             if isinstance(param_value, date):
-                dry_run_string = dry_run_string.replace(param_name,
-                                                        param_value.strftime(
-                                                            "%Y-%m-%d"))
+                dry_run_string = dry_run_string.replace(
+                    param_name, param_value.strftime("%Y-%m-%d")
+                )
             elif isinstance(param_value, str):
                 dry_run_string = dry_run_string.replace(param_name, param_value)
             else:
                 log.handle_value_error(
-                    err=f"Unexpected parameter type: {type(param_value)}")
+                    err=f"Unexpected parameter type: {type(param_value)}"
+                )
 
         return dry_run_string
 
     def results(self, to_dataframe: bool = False) -> list[dict] or pd.DataFrame:
         """
-        Get the formatted query results as a list of dictionaries or as a pandas dataframe
+        Get the formatted query results as a list of dictionaries or as pandas dataframe
         :param to_dataframe: If True, return the results as a pandas dataframe
         :return: list[dict]
         """
@@ -141,7 +140,7 @@ class CostQuery:
             log.handle_user_error(
                 err=None,
                 message="Expecting query job but it is None. Try running the query "
-                        "first."
+                "first.",
             )
         else:
             if to_dataframe:
@@ -163,11 +162,11 @@ class CostQuery:
         return bq_query_cost_calculation(
             query=self.query_template,
             bq_client=self.bq_client,
-            job_config=self.query_config
+            job_config=self.query_config,
         )
 
     def _create_bq_query_job_config(
-            self, date_padding: int = 2
+        self, date_padding: int = 2
     ) -> bigquery.QueryJobConfig:
         """
         Create BQ Job config to be used while executing a query.
@@ -176,11 +175,11 @@ class CostQuery:
         """
 
         formatted_start_date = (
-                self.start_time - timedelta(days=date_padding)
+            self.start_time - timedelta(days=date_padding)
         ).strftime("%Y-%m-%d")
-        formatted_end_date = (
-                self.end_time + timedelta(days=date_padding)
-        ).strftime("%Y-%m-%d")
+        formatted_end_date = (self.end_time + timedelta(days=date_padding)).strftime(
+            "%Y-%m-%d"
+        )
 
         return bigquery.QueryJobConfig(
             query_parameters=[
@@ -200,7 +199,8 @@ class CostQuery:
         check_minimum_time_passed_since_workflow_completion(end_time=self.end_time)
         check_bq_table_schema(
             bq_client=self.bq_client,
-            table_id=self.bq_cost_table, expected_schema=TERRA_GCP_BILLING_SCHEMA
+            table_id=self.bq_cost_table,
+            expected_schema=TERRA_GCP_BILLING_SCHEMA,
         )
         check_bq_table_exists(bq_client=self.bq_client, table_id=self.bq_cost_table)
         check_cost_to_query_bq(
