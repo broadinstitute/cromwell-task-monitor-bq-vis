@@ -45,6 +45,9 @@ class CostPlots:
         :param color: Color the bars by cost description
         :return:
         """
+        # Check if task_name is in the cost_data
+        if task_name not in self.cost_data['task_name'].unique():
+            raise ValueError(f"Task name {task_name} not found in the cost data.")
 
         task_cost_data = self.cost_data[self.cost_data['task_name'] == task_name]
 
