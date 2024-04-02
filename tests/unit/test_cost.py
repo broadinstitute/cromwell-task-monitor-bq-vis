@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta
-from unittest.mock import patch
 
-import pandas as pd
 import pytest
 
 from cromonitor.query import cost

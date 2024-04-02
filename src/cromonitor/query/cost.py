@@ -229,9 +229,9 @@ class CostQuery:
             SELECT
               -- Workflow details
               project.id AS google_project_id,
-              (SELECT REGEXP_REPLACE(value, r'^terra-', '') FROM UNNEST(labels) AS l WHERE l.key = 'terra-submission-id') AS submission_id, 
-              (SELECT REGEXP_REPLACE(value, r'^cromwell-', '') FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-workflow-id') AS workflow_id,  
-              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name, 
+              (SELECT REGEXP_REPLACE(value, r'^terra-', '') FROM UNNEST(labels) AS l WHERE l.key = 'terra-submission-id') AS submission_id,
+              (SELECT REGEXP_REPLACE(value, r'^cromwell-', '') FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-workflow-id') AS workflow_id,
+              (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-task-name') AS task_name,
               (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'cromwell-sub-workflow-name') AS subworkflow_name,
               (SELECT value FROM UNNEST(labels) AS l WHERE l.key = 'wdl-call-alias') AS task_alias,
               -- Cost breakdown
