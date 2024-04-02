@@ -44,12 +44,12 @@ class CostQuery:
     """
 
     def __init__(
-            self,
-            workflow_id: str,
-            bq_cost_table: str,
-            start_time: datetime,
-            end_time: datetime,
-            debug: bool = False,
+        self,
+        workflow_id: str,
+        bq_cost_table: str,
+        start_time: datetime,
+        end_time: datetime,
+        debug: bool = False,
     ):
 
         if not workflow_id:
@@ -140,7 +140,7 @@ class CostQuery:
             log.handle_user_error(
                 err=None,
                 message="Expecting query job but it is None. Try running the query "
-                        "first.",
+                "first.",
             )
         else:
             if to_dataframe:
@@ -166,7 +166,7 @@ class CostQuery:
         )
 
     def _create_bq_query_job_config(
-            self, date_padding: int = 2
+        self, date_padding: int = 2
     ) -> bigquery.QueryJobConfig:
         """
         Create BQ Job config to be used while executing a query.
@@ -175,7 +175,7 @@ class CostQuery:
         """
 
         formatted_start_date = (
-                self.start_time - timedelta(days=date_padding)
+            self.start_time - timedelta(days=date_padding)
         ).strftime("%Y-%m-%d")
         formatted_end_date = (self.end_time + timedelta(days=date_padding)).strftime(
             "%Y-%m-%d"

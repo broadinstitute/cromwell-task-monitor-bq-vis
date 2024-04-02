@@ -16,13 +16,12 @@ class TestCost:
         ],
     )
     def test_check_minimum_time_passed_since_workflow_completion(
-            self,
-            end_time: datetime,
-            expected: bool,
+        self,
+        end_time: datetime,
+        expected: bool,
     ):
         # Act
         result = cost.check_minimum_time_passed_since_workflow_completion(end_time)
 
         # Assert
         assert result[0] == expected
-
