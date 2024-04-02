@@ -104,7 +104,7 @@ class CostQuery:
 
         return self.query_job
 
-    def query_string(self) -> str:
+    def get_query_string(self) -> str:
         """
         Get the query string with all parameters replaced by their value.
         :return: Query string

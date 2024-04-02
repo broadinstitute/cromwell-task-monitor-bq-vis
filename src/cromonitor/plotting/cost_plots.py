@@ -1,8 +1,9 @@
 # Class for plotting cost data.
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 import plotly.express as px
+from ..logging import logging as log
 
 
 class CostPlots:
@@ -23,9 +24,11 @@ class CostPlots:
         """
         Plot the cost data
         :param title: Title for the plot
-        :param group_by_description:
-        :param color:
-        :return:
+        :param group_by_description: Group the cost by description
+        :param color: Color the bars by cost description
+        or specify a column to color by.
+        If set to None, no coloring will be done.
+        :return: A plotly Figure object with the cost data plot.
         """
 
         return plotly_bar_cost(
@@ -36,18 +39,24 @@ class CostPlots:
                        title: Optional[str] = "Task Cost Per Workflow",
                        group_by_description: Optional[bool] = False,
                        color: Optional[str] = "cost_description",
-                       ) -> px.bar:
+                       ) -> Union[px.bar, None]:
         """
         Plot the cost data
         :param task_name: Task name to plot
         :param title: Title for the plot
         :param group_by_description: Group the cost by description
         :param color: Color the bars by cost description
-        :return:
+        or specify a column to color by.
+        If set to None, no coloring will be done.
+        :return: A plotly Figure object with the cost data plot.
         """
         # Check if task_name is in the cost_data
         if task_name not in self.cost_data['task_name'].unique():
-            raise ValueError(f"Task name {task_name} not found in the cost data.")
+            log.handle_user_error(
+                err=None,
+                message=f"Task name {task_name} not found in the cost data."
+            )
+            return None
 
         task_cost_data = self.cost_data[self.cost_data['task_name'] == task_name]
 
@@ -64,20 +73,16 @@ def plotly_bar_cost(
         color: Optional[str] = None,
 ) -> px.bar:
     """
-
-    :param color:
-    :param cost_df:
-    :param title:
-    :param group_des:
-    :return:
+    Plot the cost data
+    :param cost_df: DataFrame with cost data
+    :param title: Title for the plot
+    :param group_des: Group the cost by description
+    :param color: Color the bars by specified column
+    :return: A plotly Figure object with the cost data plot.
     """
 
-    if color:
-        fig = px.bar(cost_df, x="task_name", y="cost", color=color,
-                    title=title, hover_data="machine_spec")
-    else:
-        fig = px.bar(cost_df, x="task_name", y="cost",
-                    title=title, hover_data="machine_spec")
+    fig = px.bar(cost_df, x="task_name", y="cost", color=color,
+                 title=title, hover_data="machine_spec")
 
     fig.update_layout(
         xaxis_title="Task Name",
