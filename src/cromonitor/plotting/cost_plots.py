@@ -11,6 +11,7 @@ class CostPlots:
     """
 
     def __init__(self, cost_data: pd.DataFrame):
+
         self.cost_data: pd.DataFrame = cost_data
         self.cost_data.fillna('NA', inplace=True)  # Fill NaN values with 'NA'
 

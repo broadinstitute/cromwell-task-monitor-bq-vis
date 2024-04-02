@@ -55,6 +55,15 @@ class CostQuery:
             debug: bool = False
     ):
 
+        if not workflow_id:
+            log.handle_user_error(err=None, message="workflow_id cannot be empty")
+        if not bq_cost_table:
+            log.handle_user_error(err=None, message="bq_cost_table cannot be empty")
+        if not start_time:
+            log.handle_user_error(err=None, message="start_time cannot be empty")
+        if not end_time:
+            log.handle_user_error(err=None, message="end_time cannot be empty")
+
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
         if debug:
