@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from cromonitor.query import cost
+from cromonitor.query.cost import check_minimum_time_passed_since_workflow_completion
 
 
 class TestCost:
@@ -19,7 +19,7 @@ class TestCost:
         expected: bool,
     ):
         # Act
-        result = cost.check_minimum_time_passed_since_workflow_completion(end_time)
+        result = check_minimum_time_passed_since_workflow_completion(end_time)
 
         # Assert
         assert result[0] == expected

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pandas as pd
@@ -33,7 +33,7 @@ class TestFissUtils:
     def test_convert_to_datetime(self):
         # Arrange
         date_string = "2022-01-01T00:00:00.000Z"
-        expected_datetime = datetime(2022, 1, 1, 0, 0, 0)
+        expected_datetime = datetime(2022, 1, 1, 0, 0, 0).replace(tzinfo=timezone.utc)
 
         # Act
         result = utils._convert_to_datetime(date_string)
