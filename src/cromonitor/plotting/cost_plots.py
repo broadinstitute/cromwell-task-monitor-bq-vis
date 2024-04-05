@@ -133,7 +133,7 @@ def plotly_bar_cost(
     :return: A plotly Figure object with the cost data plot.
     """
 
-    cost_df_sorted = sort_dataframe_by_cost(
+    cost_df_sorted = filter_and_sort_dataframe_by_cost(
         cost_df=cost_df,
         grouping_column=column_name_for_x_axis,
         threshold_cost_percent=threshold_cost_percent,
@@ -142,7 +142,7 @@ def plotly_bar_cost(
     x_axis_order = get_sorted_group_order(
         cost_df_sorted=cost_df_sorted,
         column_name_to_group_by=column_name_for_x_axis,
-        cost_column=cost_column
+        cost_column=cost_column,
     )
 
     fig = px.bar(
@@ -170,7 +170,7 @@ def plotly_bar_cost(
     return fig
 
 
-def sort_dataframe_by_cost(
+def filter_and_sort_dataframe_by_cost(
     cost_df: pd.DataFrame,
     grouping_column: str,
     threshold_cost_percent: float = None,
@@ -259,9 +259,9 @@ def filter_dataframe_by_cost_threshold(
 
 
 def get_sorted_group_order(
-        cost_df_sorted: pd.DataFrame,
-        column_name_to_group_by: str,
-        cost_column: str,
+    cost_df_sorted: pd.DataFrame,
+    column_name_to_group_by: str,
+    cost_column: str,
 ):
     """
     Group dataframe by the specified 'cost_description_column', sum the 'cost_column'
