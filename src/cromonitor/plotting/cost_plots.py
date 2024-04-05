@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 import pandas as pd
 import plotly.express as px
-from plotly.graph_objs._figure import Figure
+import plotly.graph_objects as go
 
 from ..logging import logging as log
 
@@ -21,13 +21,18 @@ class CostPlots:
         self.cost_data: pd.DataFrame = cost_data
         self.cost_data.fillna("NA", inplace=True)  # Fill NaN values with 'NA'
 
+        if self.cost_data.empty:
+            log.handle_user_error(
+                err=None, message="Cost data is empty. Please check the cost data."
+            )
+
     def plot_workflow_cost(
         self,
         title: Optional[str] = "Workflow Cost Per Task",
         group_by_description: Optional[bool] = False,
         color: Optional[str] = COST_DESCRIPTION_COLUMN_NAME,
         threshold_cost_percent: Optional[float] = None,
-    ) -> Figure:
+    ) -> go.Figure:
         """
         Plot the cost data
         :param title: Title for the plot
@@ -40,13 +45,14 @@ class CostPlots:
         :return: A plotly Figure object with the cost data plot.
         """
 
-        return plotly_bar_workflow_cost(
+        return plotly_bar_cost(
             self.cost_data,
-            title=title,
-            group_des=group_by_description,
+            plot_title=title,
+            group_by_description=group_by_description,
             color=color,
             threshold_cost_percent=threshold_cost_percent,
             x_axis_title="Task Name",
+            column_name_for_x_axis=TASK_NAME_COLUMN_NAME,
         )
 
     def plot_task_cost(
@@ -56,7 +62,7 @@ class CostPlots:
         color: Optional[str] = COST_DESCRIPTION_COLUMN_NAME,
         threshold_cost_percent: Optional[float] = None,
         task_name_column=TASK_NAME_COLUMN_NAME,
-    ) -> Figure:
+    ) -> go.Figure:
         """
         Plot the cost data
 
@@ -78,72 +84,75 @@ class CostPlots:
             )
             raise ValueError(f"Task name {task_name} not found in the cost data.")
 
-        if title is None:
-            title = f"Cost for {task_name}"
+        set_title = title if title else f"Cost for Task: {task_name}"
 
+        # Filter the cost data for the specified task
         task_cost_data = self.cost_data[self.cost_data[task_name_column] == task_name]
 
-        return plotly_bar_task_cost(
+        return plotly_bar_cost(
             cost_df=task_cost_data,
-            title=title,
+            plot_title=set_title,
+            x_axis_title="Cost Description",
+            group_by_description=False,
             color=color,
             threshold_cost_percent=threshold_cost_percent,
-            x_axis_title="Cost Description",
+            column_name_for_x_axis=COST_DESCRIPTION_COLUMN_NAME,
         )
 
 
-def plotly_bar_workflow_cost(
+def plotly_bar_cost(
     cost_df,
-    title,
+    plot_title,
     x_axis_title: str,
-    group_des: Optional[bool] = False,
+    column_name_for_x_axis: str,
+    group_by_description: Optional[bool] = False,
     color: Optional[str] = None,
     threshold_cost_percent: Optional[float] = None,
-    task_name_column=TASK_NAME_COLUMN_NAME,
     cost_column=COST_COLUMN_NAME,
     y_axis_title: str = "Cost",
     legend_title: str = "Cost Description",
-) -> Figure:
+    hover_data: Optional[Union[str, list[str]]] = "machine_spec",
+) -> go.Figure:
     """
-    Plot the cost data
-
+    Plot the cost data using Plotly.
 
 
     :param cost_df: DataFrame with cost data
-    :param title: Title for the plot
+    :param plot_title: Title for the plot
     :param x_axis_title: Title for the x-axis
-    :param group_des: Group the cost by description
+    :param group_by_description: Group the cost by description
     :param color: Color the bars by specified column
     :param threshold_cost_percent: Plots the greatest costing tasks that contribute
     to the specified percentage of the total cost. (0 plots the most expensive
     task, 100 plots all tasks)
-    :param task_name_column: Name of the column containing the task names
+    :param column_name_for_x_axis: Name column in the DataFrame to use for the x-axis
     :param cost_column: Name of the column containing the cost data
     :param legend_title: Title for the legend
     :param y_axis_title: Title for the y-axis
+    :param hover_data: Data to display when hovering over the bars
     :return: A plotly Figure object with the cost data plot.
     """
 
     cost_df_sorted = sort_dataframe_by_cost(
         cost_df=cost_df,
-        grouping_column=task_name_column,
+        grouping_column=column_name_for_x_axis,
         threshold_cost_percent=threshold_cost_percent,
     )
 
     x_axis_order = get_sorted_group_order(
         cost_df_sorted=cost_df_sorted,
-        cost_description_column=task_name_column,
+        column_name_to_group_by=column_name_for_x_axis,
         cost_column=cost_column
     )
 
     fig = px.bar(
         cost_df_sorted,
-        x=task_name_column,
+        x=column_name_for_x_axis,
         y=cost_column,
         color=color,
-        title=title,
-        hover_data="machine_spec",
-        category_orders={task_name_column: x_axis_order},
+        title=plot_title,
+        hover_data=hover_data,
+        category_orders={column_name_for_x_axis: x_axis_order},
     )
 
     fig.update_layout(
@@ -151,7 +160,7 @@ def plotly_bar_workflow_cost(
         yaxis_title=y_axis_title,
         legend_title=legend_title,
     )
-    if group_des:
+    if group_by_description:
         fig.update_layout(
             barmode="group",
             bargap=0.15,  # gap between bars of adjacent location coordinates.
@@ -161,68 +170,11 @@ def plotly_bar_workflow_cost(
     return fig
 
 
-def plotly_bar_task_cost(
-    cost_df,
-    title,
-    x_axis_title: str,
-    color: Optional[str] = None,
-    threshold_cost_percent: Optional[float] = None,
-    cost_column=COST_COLUMN_NAME,
-    cost_description_column=COST_DESCRIPTION_COLUMN_NAME,
-    y_axis_title: str = "Cost",
-    legend_title: str = "Cost Description"
-) -> Figure:
-    """
-    Plot the cost data
-
-    :param x_axis_title:
-    :param cost_df: DataFrame with cost data
-    :param title: Title for the plot
-    :param color: Color the bars by specified column
-    :param threshold_cost_percent: Optional (float between 0 and 100).
-    :param cost_description_column: Name of the column containing the cost descriptions
-    :param cost_column: Name of the column containing the cost data
-    :param legend_title: Title for the legend
-    :param y_axis_title: Title for the y-axis
-    :return: A plotly Figure object with the cost data plot.
-    """
-
-    cost_df_sorted = sort_dataframe_by_cost(
-        cost_df=cost_df,
-        grouping_column=cost_description_column,
-        threshold_cost_percent=threshold_cost_percent,
-    )
-
-    x_axis_order = get_sorted_group_order(
-        cost_df_sorted=cost_df_sorted,
-        cost_description_column=cost_description_column,
-        cost_column=cost_column,
-    )
-
-    fig = px.bar(
-        cost_df_sorted,
-        x=cost_description_column,
-        y=cost_column,
-        color=color,
-        title=title,
-        hover_data="machine_spec",
-        category_orders={cost_description_column: x_axis_order},
-    )
-
-    fig.update_layout(
-        xaxis_title=x_axis_title,
-        yaxis_title=y_axis_title,
-        legend_title=legend_title,
-    )
-
-    return fig
-
-
 def sort_dataframe_by_cost(
-        cost_df: pd.DataFrame,
-        grouping_column: str,
-        threshold_cost_percent=None,
-        cost_column: str = COST_COLUMN_NAME,
+    cost_df: pd.DataFrame,
+    grouping_column: str,
+    threshold_cost_percent: float = None,
+    cost_column: str = COST_COLUMN_NAME,
 ) -> pd.DataFrame:
     """
     Sort the DataFrame by cost in descending order.
@@ -238,11 +190,11 @@ def sort_dataframe_by_cost(
             threshold_percent=threshold_cost_percent,
             grouping_column=grouping_column,
         )
-        # Sort the DataFrame by 'cost' in descending order
-        cost_df_sorted = cost_df_sorted.sort_values(by=[cost_column], ascending=False)
     else:
-        # Sort the DataFrame by 'cost' in descending order
-        cost_df_sorted = cost_df.sort_values(by=[cost_column], ascending=False)
+        cost_df_sorted = cost_df.copy()
+
+    # Sort the DataFrame by 'cost' in descending order
+    cost_df_sorted = cost_df_sorted.sort_values(by=[cost_column], ascending=False)
 
     return cost_df_sorted
 
@@ -250,8 +202,8 @@ def sort_dataframe_by_cost(
 def filter_dataframe_by_cost_threshold(
     dataframe: pd.DataFrame,
     threshold_percent: float,
-    grouping_column=TASK_NAME_COLUMN_NAME,
-    cost_column=COST_COLUMN_NAME,
+    grouping_column: str = TASK_NAME_COLUMN_NAME,
+    cost_column: str = COST_COLUMN_NAME,
 ) -> pd.DataFrame:
     """
     Apply a threshold to the DataFrame based on the total cost of the tasks.
@@ -266,6 +218,7 @@ def filter_dataframe_by_cost_threshold(
         log.handle_user_error(
             err=None, message="Threshold percentage must be between 0 and 100."
         )
+        raise ValueError("Threshold percentage must be between 0 and 100.")
 
     grouped_and_sorted_df = (
         dataframe.groupby(grouping_column)[cost_column]
@@ -277,13 +230,9 @@ def filter_dataframe_by_cost_threshold(
     cost_threshold = total_cost * (threshold_percent / 100)
 
     filtered_dataframe = pd.DataFrame()
-    for (
-        group_index,
-        cost,
-    ) in (
-        grouped_and_sorted_df.items()
-    ):  # Iterate over the task names starting from the most expensive
-        # Filter the dataframe for the current task
+    # Iterate over the task names starting from the most expensive
+    for group_index, cost in grouped_and_sorted_df.items():
+        # Filter the dataframe for the current group
         grouped_df = dataframe[dataframe[grouping_column] == group_index]
 
         # If the filtered_dataframe is empty, this is the first iteration
@@ -309,17 +258,21 @@ def filter_dataframe_by_cost_threshold(
     return filtered_dataframe
 
 
-def get_sorted_group_order(cost_df_sorted, cost_description_column, cost_column):
+def get_sorted_group_order(
+        cost_df_sorted: pd.DataFrame,
+        column_name_to_group_by: str,
+        cost_column: str,
+):
     """
-    Group by 'task_name', calculate the sum of 'cost' for each task, sort in
-    descending order. Used to order the x-axis based on the total cost of each task.
+    Group dataframe by the specified 'cost_description_column', sum the 'cost_column'
+    and sort the DataFrame by the cost in descending order.
     :param cost_df_sorted: DataFrame with cost data
-    :param cost_description_column: Name of the column containing the cost descriptions
+    :param column_name_to_group_by: Name of the column containing the cost descriptions
     :param cost_column: Name of the column containing the cost data
-    :return: Index of the sorted DataFrame
+    :return: Return an index of the sorted DataFrame.
     """
     return (
-        cost_df_sorted.groupby(cost_description_column)[cost_column]
+        cost_df_sorted.groupby(column_name_to_group_by)[cost_column]
         .sum()
         .sort_values(ascending=False)
         .index
