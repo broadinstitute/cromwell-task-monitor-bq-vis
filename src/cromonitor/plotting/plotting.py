@@ -56,8 +56,11 @@ def get_sorted_task_summary(
 
     :return:
     """
-    # Todo: Update such that it retrieves task duration for the new
-    #  metrics_duration_sec column
+    # Sort the task summary by duration
+    df_monitoring.metrics_runtime.sort_values(
+        by="metrics_duration_sec", ascending=False, inplace=True
+    )
+
     all_task_names = df_monitoring.metrics_runtime.runtime_task_call_name.unique()
     task_summary_dict = tableUtils.get_task_summary(
         task_names=all_task_names, df=df_monitoring.metrics_runtime
@@ -65,15 +68,12 @@ def get_sorted_task_summary(
     task_summary_duration = tableUtils.get_task_summary_duration(
         task_summary_dict=task_summary_dict
     )
+
+    # Convert the task summary dictionary to a dataframe
     df_task_summary = pd.DataFrame.from_dict(task_summary_dict)
     df_task_summary_T = df_task_summary.T.rename_axis(task_column_name).reset_index()
     df_task_summary_named = df_task_summary_T.rename(
         columns={0: duration_column_name, 1: shards_column_name}, errors="raise"
-    )
-
-    # Sort the task summary by duration
-    df_task_summary_named = df_task_summary_named.sort_values(
-        by=duration_column_name, ascending=False
     )
 
     return df_task_summary_named, task_summary_duration
