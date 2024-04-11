@@ -2,7 +2,6 @@
 This file contains utility functions for the data analysis
 """
 
-import datetime
 from os import path
 
 import pandas as pd
@@ -30,9 +29,8 @@ def load_dataframe(filename) -> pd.DataFrame or None:
 
 
 def get_info_per_task(
-        task_name: str,
-        df: pd.DataFrame,
-        task_column_name: str = "runtime_task_call_name") -> (int, int):
+    task_name: str, df: pd.DataFrame, task_column_name: str = "runtime_task_call_name"
+) -> (int, int):
     """
     Get the duration and shard counts for a given task
     @param task_name: Name of the task

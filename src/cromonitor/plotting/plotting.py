@@ -41,11 +41,11 @@ def calculate_workflow_duration(df_monitoring) -> int:
 
 
 def get_sorted_task_summary(
-        df_monitoring: pd.DataFrame,
-        task_column_name: str = "Tasks",
-        duration_column_name: str = "Duration(s)",
-        shards_column_name: str = "Shards",
-    ) -> (pd.DataFrame, dict):
+    df_monitoring: pd.DataFrame,
+    task_column_name: str = "Tasks",
+    duration_column_name: str = "Duration(s)",
+    shards_column_name: str = "Shards",
+) -> (pd.DataFrame, dict):
     """
     Get the task name and duration summary for a given workflow monitoring dataframe
 
