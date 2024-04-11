@@ -40,10 +40,20 @@ def calculate_workflow_duration(df_monitoring) -> int:
     return workflow_duration
 
 
-def get_task_summary(df_monitoring) -> (pd.DataFrame, dict):
+def get_sorted_task_summary(
+        df_monitoring: pd.DataFrame,
+        task_column_name: str = "Tasks",
+        duration_column_name: str = "Duration(s)",
+        shards_column_name: str = "Shards",
+    ) -> (pd.DataFrame, dict):
     """
     Get the task name and duration summary for a given workflow monitoring dataframe
-    :param df_monitoring: The dataframe containing the monitoring metrics.
+
+    :param df_monitoring: The dataframe that contains the monitoring metrics.
+    :param shards_column_name: Shard column name for the task summary table
+    :param duration_column_name: Duration column name for the task summary table
+    :param task_column_name: Task column name for the task summary table
+
     :return:
     """
     # Todo: Update such that it retrieves task duration for the new
@@ -56,10 +66,16 @@ def get_task_summary(df_monitoring) -> (pd.DataFrame, dict):
         task_summary_dict=task_summary_dict
     )
     df_task_summary = pd.DataFrame.from_dict(task_summary_dict)
-    df_task_summary_T = df_task_summary.T.rename_axis("Tasks").reset_index()
+    df_task_summary_T = df_task_summary.T.rename_axis(task_column_name).reset_index()
     df_task_summary_named = df_task_summary_T.rename(
-        columns={0: "Duration", 1: "Shards"}, errors="raise"
+        columns={0: duration_column_name, 1: shards_column_name}, errors="raise"
     )
+
+    # Sort the task summary by duration
+    df_task_summary_named = df_task_summary_named.sort_values(
+        by=duration_column_name, ascending=False
+    )
+
     return df_task_summary_named, task_summary_duration
 
 
@@ -155,7 +171,9 @@ def generate_workflow_summary(
 
     workflow_duration = calculate_workflow_duration(df_monitoring=df_monitoring)
 
-    df_task_summary_named, task_summary_duration = get_task_summary(df_monitoring)
+    df_task_summary_named, task_summary_duration = get_sorted_task_summary(
+        df_monitoring
+    )
 
     # Create table using plotly
     workflow_task_summary_table = create_plotly_table(df_input=df_task_summary_named)
