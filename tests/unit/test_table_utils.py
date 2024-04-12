@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 import pandas as pd
 
 from cromonitor.table import utils
@@ -17,13 +15,9 @@ class TestTablesUtils:
         # Create a mock DataFrame
         df = pd.DataFrame(
             {
-                "runtime_task_call_name": ["task1", "task1", "task2"],
-                "metrics_timestamp": [
-                    datetime.now(),
-                    datetime.now() + timedelta(seconds=10),
-                    datetime.now(),
-                ],
-                "runtime_shard": [1, 1, 2],
+                "runtime_task_call_name": ["task1", "task1", "task1", "task2"],
+                "metrics_duration_sec": [70, 70, 70, 20],
+                "runtime_shard": [1, 2, 3, 1],
             }
         )
 
@@ -31,20 +25,16 @@ class TestTablesUtils:
         task_duration, shard_count = utils.get_info_per_task("task1", df)
 
         # Assert that the task duration and shard count are as expected
-        assert task_duration == 10
-        assert shard_count == 1
+        assert task_duration == 70
+        assert shard_count == 3
 
     def test_get_task_summary(self):
         # Create a mock DataFrame
         df = pd.DataFrame(
             {
-                "runtime_task_call_name": ["task1", "task1", "task2"],
-                "metrics_timestamp": [
-                    datetime.now(),
-                    datetime.now() + timedelta(seconds=10),
-                    datetime.now(),
-                ],
-                "runtime_shard": [1, 1, 2],
+                "runtime_task_call_name": ["task1", "task1", "task1", "task2"],
+                "metrics_duration_sec": [70, 70, 70, 20],
+                "runtime_shard": [1, 2, 3, 1],
             }
         )
 
@@ -52,7 +42,7 @@ class TestTablesUtils:
         task_summary_dict = utils.get_task_summary(["task1", "task2"], df)
 
         # Assert that the task summary dictionary is as expected
-        assert task_summary_dict == {"task1": (10, 1), "task2": (0, 1)}
+        assert task_summary_dict == {"task1": (70, 3), "task2": (20, 1)}
 
     def test_get_task_summary_duration(self):
         # Create a mock task summary dictionary
