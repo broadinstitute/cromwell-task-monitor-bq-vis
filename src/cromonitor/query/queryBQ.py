@@ -283,8 +283,8 @@ class QueryBQToMonitor:
         # Error if metrics is empty
         if self.metrics.empty:
             self.logger.error(
-                "Error: Metrics table is empty. Please verify workflow "
-                "id or timeframe."
+                "Error: Metrics table is empty. Please verify google project id,"
+                " workflow id or timeframe."
             )
             return
         # Warning if there are missing metrics

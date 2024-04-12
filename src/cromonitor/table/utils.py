@@ -2,7 +2,6 @@
 This file contains utility functions for the data analysis
 """
 
-import datetime
 from os import path
 
 import pandas as pd
@@ -29,27 +28,25 @@ def load_dataframe(filename) -> pd.DataFrame or None:
     return None
 
 
-def get_info_per_task(task_name, df) -> (int, int):
+def get_info_per_task(
+    task_name: str, df: pd.DataFrame, task_column_name: str = "runtime_task_call_name"
+) -> (int, int):
     """
-    Get the duration and shard count for a given task
-    @param task_name:
-    @param df:
+    Get the duration and shard counts for a given task
+    @param task_name: Name of the task
+    @param df: Dataframe that contains the task information
+    @param task_column_name: Name of the column that contains the task name
     @return:
     """
-    df_task = df.loc[(df["runtime_task_call_name"] == task_name)]
-    latest_end_datetime = max(df_task["metrics_timestamp"])
-    earliest_start_datetime = min(df_task["metrics_timestamp"])
-    task_duration = round(
-        datetime.timedelta.total_seconds(latest_end_datetime - earliest_start_datetime)
-    )
-
+    df_task = df.loc[(df[task_column_name] == task_name)]
+    task_duration = df_task.metrics_duration_sec.unique()[0]
     shard_count = len(df_task.runtime_shard.unique())
     return task_duration, shard_count
 
 
 def get_task_summary(task_names: list, df: pd.DataFrame) -> dict:
     """
-    Get the duration and shard count for a given task
+    Get the duration and shard counts for a given task
     :param df:
     :param task_names:
     :return:

@@ -22,16 +22,29 @@ class TestPlotting:
         # Assert that the result is as expected
         assert result == 171
 
-    def test_get_task_summary(self, mock_data):
+    def test_get_sorted_task_summary(self, mock_data):
         """
         Test the get_task_summary function
         :param mock_data:
         :return:
         """
 
+        task_column_name = "Tasks"
+        duration_column_name = "Duration(s)"
+        shards_column_name = "Shards"
+
         # Call the function with the mock DataFrame
-        task_summary_df, duration_sum = plotting.get_task_summary(mock_data)
-        data = {"Tasks": ["write_to_stdout"], "Duration": [171], "Shards": [1]}
+        task_summary_df, duration_sum = plotting.get_sorted_task_summary(
+            df_monitoring=mock_data,
+            task_column_name=task_column_name,
+            duration_column_name=duration_column_name,
+            shards_column_name=shards_column_name,
+        )
+        data = {
+            task_column_name: ["write_to_stdout"],
+            duration_column_name: [171],
+            shards_column_name: [1],
+        }
 
         # Create the DataFrame
         expected_df = pd.DataFrame(data)
