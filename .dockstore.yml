@@ -1,0 +1,14 @@
+version: 1.2
+notebooks:
+  - name: example-interactive-cost-report
+    path: /notebooks/example-interactive-cost-report.ipynb
+    topic: A Terra friendly notebook that generates a cost report
+  - name: example-interactive-resource-monitoring
+    path: /notebooks/example-interactive-resource-monitoring.ipynb
+    topic: A Terra friendly notebook that monitors resource usage
+  - name: example-papermill-cost-report
+    path: /notebooks/example-papermill-cost-report.ipynb
+    topic: A Papermill ready notebook that generates a cost report
+  - name: example-papermill-resource-monitoring
+    path: /notebooks/example-papermill-resource-monitoring.ipynb
+    topic: A Papermill ready notebook that monitors resource usage
